@@ -3,7 +3,7 @@ import Chart from "chart.js/auto";
 import "../styles/dashboard.css";
 import logo from "../assets/logo.png";
 
-export default function Dashboard({ usuarioCorreo, onCerrarSesion }) {
+export default function Dashboard({ usuarioCorreo, onIrUsuarios, onCerrarSesion }) {
     const [menuAbierto, setMenuAbierto] = useState(null);
     const [busqueda, setBusqueda] = useState("");
 
@@ -20,6 +20,15 @@ export default function Dashboard({ usuarioCorreo, onCerrarSesion }) {
         e.preventDefault();
         if (typeof onCerrarSesion === "function") {
             onCerrarSesion();
+        }
+    };
+
+    const manejarClicEnlace = (e, enlace) => {
+        if (enlace.vista === "usuarios") {
+            e.preventDefault();
+            if (typeof onIrUsuarios === "function") {
+                onIrUsuarios();
+            }
         }
     };
 
@@ -93,7 +102,7 @@ export default function Dashboard({ usuarioCorreo, onCerrarSesion }) {
             icono: "👥",
             titulo: "Gestión Usuarios",
             enlaces: [
-                { texto: "Lista de Usuarios", href: "#usuarios" },
+                { texto: "Lista de Usuarios", href: "#usuarios", vista: "usuarios" },
                 { texto: "Roles y Permisos", href: "#roles" },
                 { texto: "Auditoría de Sesiones", href: "#auditoria" },
             ],
@@ -169,7 +178,11 @@ export default function Dashboard({ usuarioCorreo, onCerrarSesion }) {
                                 {estaAbierto && (
                                     <div className="dropdown-container open">
                                         {menu.enlaces.map((enlace) => (
-                                            <a key={enlace.texto} href={enlace.href}>
+                                            <a
+                                                key={enlace.texto}
+                                                href={enlace.href}
+                                                onClick={(e) => manejarClicEnlace(e, enlace)}
+                                            >
                                                 {enlace.texto}
                                             </a>
                                         ))}
