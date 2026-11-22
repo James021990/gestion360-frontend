@@ -1,27 +1,51 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import "../styles/login.css";
 import logo from "../assets/logo.png";
 
 export default function Login() {
+    // Estados para los campos del formulario
     const [correo, setCorreo] = useState("");
-    const [contrasena, setContrasena] = useState("");
+    const [clave, setClave] = useState("");
     const [recordarme, setRecordarme] = useState(false);
+
+    // Estados para el mensaje de validación y su color (error / éxito)
     const [mensaje, setMensaje] = useState("");
     const [esError, setEsError] = useState(false);
 
-    const manejarEnvio = (evento) => {
-        evento.preventDefault(); // Evita que la página se recargue sola
+    // Guardamos el temporizador para limpiarlo si el componente se desmonta
+    const timeoutRef = useRef(null);
 
-        if (!correo.trim() || !contrasena.trim()) {
+    useEffect(() => {
+        return () => {
+            if (timeoutRef.current) {
+                clearTimeout(timeoutRef.current);
+            }
+        };
+    }, []);
+
+    const manejarEnvio = (e) => {
+        e.preventDefault();
+
+        const correoLimpio = correo.trim();
+
+        if (!correoLimpio.includes("@")) {
             setEsError(true);
-            setMensaje("Por favor completa el correo electrónico y la contraseña.");
+            setMensaje("⚠️ Escribe un correo válido que incluya '@'.");
+            return;
+        }
+
+        if (clave.length < 8) {
+            setEsError(true);
+            setMensaje("⚠️ La contraseña debe tener mínimo 8 caracteres.");
             return;
         }
 
         setEsError(false);
-        setMensaje("Validando credenciales...");
-
-        console.log({ correo, contrasena, recordarme });
+        setMensaje("✅ ¡Datos listos! Ingresando al sistema...");
+        
+        timeoutRef.current = setTimeout(() => {
+            window.location.href = "dashboard.html";
+        }, 1000);
     };
 
     return (
@@ -57,8 +81,8 @@ export default function Login() {
                             id="pw"
                             name="pw"
                             placeholder="••••••••"
-                            value={contrasena}
-                            onChange={(e) => setContrasena(e.target.value)}
+                            value={clave}
+                            onChange={(e) => setClave(e.target.value)}
                             required
                         />
                     </div>
@@ -70,7 +94,7 @@ export default function Login() {
                                 fontSize: "13px",
                                 marginBottom: "15px",
                                 fontWeight: 600,
-                                color: esError ? "#c0392b" : "#1e6b3a",
+                                color: esError ? "#dc2626" : "#059669",
                             }}
                         >
                             {mensaje}
