@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState } from "react";
-import { useEffect, useRef, useState } from "react";
 import Chart from "chart.js/auto";
 import "../styles/dashboard.css";
 import logo from "../assets/logo.png";
