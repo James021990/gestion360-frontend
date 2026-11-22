@@ -1,11 +1,11 @@
 import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Chart from "chart.js/auto";
 import "../styles/dashboard.css";
 import logo from "../assets/logo.png";
 
-export default function Dashboard() {
+export default function Dashboard({ usuarioCorreo, onCerrarSesion }) {
     const [menuAbierto, setMenuAbierto] = useState(null);
-
     const [busqueda, setBusqueda] = useState("");
 
     const salesCanvasRef = useRef(null);
@@ -15,6 +15,13 @@ export default function Dashboard() {
 
     const alternarMenu = (nombreMenu) => {
         setMenuAbierto((prev) => (prev === nombreMenu ? null : nombreMenu));
+    };
+
+    const manejarCerrarSesion = (e) => {
+        e.preventDefault();
+        if (typeof onCerrarSesion === "function") {
+            onCerrarSesion();
+        }
     };
 
     useEffect(() => {
@@ -180,7 +187,11 @@ export default function Dashboard() {
                 </nav>
 
                 <div className="sidebar-footer">
-                    <a href="#logout" className="logout-btn">
+                    <a
+                        href="#logout"
+                        className="logout-btn"
+                        onClick={manejarCerrarSesion}
+                    >
                         <span className="icon">🚪</span>
                         <span className="text">Cerrar Sesión</span>
                     </a>
@@ -206,7 +217,9 @@ export default function Dashboard() {
                             <span className="avatar">👤</span>
                             <div className="user-info">
                                 <span className="user-name">Yeins Gómez</span>
-                                <span className="user-role">Administrador</span>
+                                <span className="user-role">
+                  {usuarioCorreo ? `Administrador · ${usuarioCorreo}` : "Administrador"}
+                </span>
                             </div>
                         </div>
                     </div>
