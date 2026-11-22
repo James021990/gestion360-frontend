@@ -42,7 +42,7 @@ export default function Login() {
 
         setEsError(false);
         setMensaje("✅ ¡Datos listos! Ingresando al sistema...");
-        
+
         timeoutRef.current = setTimeout(() => {
             window.location.href = "dashboard.html";
         }, 1000);
