@@ -8,7 +8,7 @@ export default function Login() {
     const [recordarme, setRecordarme] = useState(false);
     const [mensaje, setMensaje] = useState("");
     const [esError, setEsError] = useState(false);
-    
+
     const manejarEnvio = (evento) => {
         evento.preventDefault(); // Evita que la página se recargue sola
 
