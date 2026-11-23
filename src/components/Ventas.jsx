@@ -5,13 +5,7 @@ import "../styles/factura.css";
 const API_FACTURAS_URL = "http://localhost:8080/api/facturas";
 const API_DETALLE_URL = "http://localhost:8080/api/detalle_factura";
 const API_CLIENTES_URL = "http://localhost:8080/api/clientes";
-
-const PRODUCTOS_INICIALES = [
-    { id: 1, codigo: "COD-001", nombre: "Licencia Software ERP (1 Año)", precio: 450000, stock: "45" },
-    { id: 2, codigo: "COD-008", nombre: "Soporte Técnico Especializado", precio: 120000, stock: "∞" },
-    { id: 3, codigo: "COD-104", nombre: "Teclado Mecánico Ergonómico", precio: 180000, stock: "12" },
-    { id: 4, codigo: "COD-105", nombre: "Mouse Inalámbrico Recargable", precio: 85000, stock: "30" },
-];
+const API_PRODUCTOS_URL = "http://localhost:8080/api/productos";
 
 export default function Ventas({
                                    usuarioActual,
@@ -23,6 +17,10 @@ export default function Ventas({
     const [clientes, setClientes] = useState([]);
     const [cargandoClientes, setCargandoClientes] = useState(true);
     const [clienteId, setClienteId] = useState("");
+
+    const [productos, setProductos] = useState([]);
+    const [cargandoProductos, setCargandoProductos] = useState(true);
+
     const [metodoPago, setMetodoPago] = useState("efectivo");
     const [busqueda, setBusqueda] = useState("");
     const [carrito, setCarrito] = useState([]);
@@ -36,20 +34,47 @@ export default function Ventas({
     const obtenerNombreCliente = (cli) =>
         cli?.nombre_o_razon_social ?? cli?.nombreORazonSocial ?? "Cliente";
 
+    const obtenerIdProducto = (prod) => prod?.id_producto ?? prod?.idProducto ?? prod?.id;
+    const obtenerCodigoProducto = (prod) =>
+        prod?.codigo ?? prod?.codigo_producto ?? prod?.codigoProducto ?? "SIN-COD";
+    const obtenerNombreProducto = (prod) =>
+        prod?.nombre ?? prod?.nombre_producto ?? prod?.nombreProducto ?? "Producto";
+    const obtenerPrecioProducto = (prod) =>
+        Number(prod?.precio ?? prod?.precio_unitario ?? prod?.precioUnitario ?? 0);
+    const obtenerStockProducto = (prod) => {
+        const rawStock = prod?.stock ?? prod?.cantidad_stock ?? prod?.cantidadStock ?? prod?.cantidad;
+        return rawStock === undefined || rawStock === null ? "—" : rawStock;
+    };
+
     useEffect(() => {
         let activo = true;
 
-        const cargarClientes = async () => {
+        const cargarDatosIniciales = async () => {
             try {
-                const res = await fetch(API_CLIENTES_URL);
-                if (!res.ok) {
-                    throw new Error(`Error al cargar clientes (${res.status})`);
+                const [resClientes, resProductos] = await Promise.all([
+                    fetch(API_CLIENTES_URL),
+                    fetch(API_PRODUCTOS_URL),
+                ]);
+
+                if (!resClientes.ok) {
+                    throw new Error(`Error al cargar clientes (${resClientes.status})`);
                 }
-                const data = await res.json();
+                if (!resProductos.ok) {
+                    throw new Error(`Error al cargar productos (${resProductos.status})`);
+                }
+
+                const [dataClientes, dataProductos] = await Promise.all([
+                    resClientes.json(),
+                    resProductos.json(),
+                ]);
+
                 if (!activo) return;
 
-                const listaClientes = Array.isArray(data) ? data : [];
+                const listaClientes = Array.isArray(dataClientes) ? dataClientes : [];
+                const listaProductos = Array.isArray(dataProductos) ? dataProductos : [];
+
                 setClientes(listaClientes);
+                setProductos(listaProductos);
 
                 if (listaClientes.length > 0) {
                     const primerId = obtenerIdCliente(listaClientes[0]);
@@ -60,16 +85,17 @@ export default function Ventas({
             } catch (error) {
                 if (activo) {
                     setEsError(true);
-                    setMensaje(`No se pudieron cargar los clientes: ${error.message}`);
+                    setMensaje(`No se pudieron cargar los datos iniciales: ${error.message}`);
                 }
             } finally {
                 if (activo) {
                     setCargandoClientes(false);
+                    setCargandoProductos(false);
                 }
             }
         };
 
-        cargarClientes();
+        cargarDatosIniciales();
 
         return () => {
             activo = false;
@@ -85,17 +111,35 @@ export default function Ventas({
     };
 
     const agregarAlCarrito = (producto) => {
+        const idProd = obtenerIdProducto(producto);
+        if (idProd === undefined || idProd === null) return;
+
+        const precioProd = obtenerPrecioProducto(producto);
+        const nombreProd = obtenerNombreProducto(producto);
+        const codigoProd = obtenerCodigoProducto(producto);
+        const stockProd = obtenerStockProducto(producto);
+
         setMensaje("");
         setCarrito((prevCarrito) => {
-            const existe = prevCarrito.find((item) => item.id === producto.id);
+            const existe = prevCarrito.find((item) => item.id === idProd);
             if (existe) {
                 return prevCarrito.map((item) =>
-                    item.id === producto.id
+                    item.id === idProd
                         ? { ...item, cantidad: item.cantidad + 1 }
                         : item
                 );
             }
-            return [...prevCarrito, { ...producto, cantidad: 1 }];
+            return [
+                ...prevCarrito,
+                {
+                    id: idProd,
+                    codigo: codigoProd,
+                    nombre: nombreProd,
+                    precio: precioProd,
+                    stock: stockProd,
+                    cantidad: 1,
+                },
+            ];
         });
     };
 
@@ -178,13 +222,14 @@ export default function Ventas({
                     const cantidadNum = Number(item.cantidad);
                     const precioNum = Number(item.precio);
                     const subtotalLineal = cantidadNum * precioNum;
+                    const idProductoNum = Number(item.id);
 
                     const detallePayload = {
                         cantidad: cantidadNum,
                         precio: precioNum,
                         subtotal_lineal: subtotalLineal,
                         factura: { id_factura: idFacturaCreada },
-                        producto: { id_producto: Number(item.id) },
+                        producto: { id_producto: idProductoNum, id: idProductoNum },
                     };
 
                     const resDetalle = await fetch(API_DETALLE_URL, {
@@ -215,11 +260,11 @@ export default function Ventas({
         }
     };
 
-    const productosFiltrados = PRODUCTOS_INICIALES.filter((prod) => {
+    const productosFiltrados = productos.filter((prod) => {
         const texto = busqueda.toLowerCase();
         return (
-            prod.nombre.toLowerCase().includes(texto) ||
-            prod.codigo.toLowerCase().includes(texto)
+            obtenerNombreProducto(prod).toLowerCase().includes(texto) ||
+            String(obtenerCodigoProducto(prod)).toLowerCase().includes(texto)
         );
     });
 
@@ -328,31 +373,38 @@ export default function Ventas({
                             </div>
 
                             <div className="product-suggestions">
-                                {productosFiltrados.length === 0 ? (
+                                {cargandoProductos ? (
                                     <p style={{ color: "#64748b", fontSize: "14px" }}>
-                                        No se encontraron productos con ese criterio.
+                                        Cargando productos desde la base de datos...
+                                    </p>
+                                ) : productosFiltrados.length === 0 ? (
+                                    <p style={{ color: "#64748b", fontSize: "14px" }}>
+                                        No se encontraron productos registrados con ese criterio.
                                     </p>
                                 ) : (
-                                    productosFiltrados.map((prod) => (
-                                        <div key={prod.id} className="product-item">
-                                            <div className="product-info">
-                                                <strong>{prod.nombre}</strong>
-                                                <span className="product-code">
-                                                    {prod.codigo} | Stock: {prod.stock}
+                                    productosFiltrados.map((prod) => {
+                                        const idProd = obtenerIdProducto(prod);
+                                        return (
+                                            <div key={idProd} className="product-item">
+                                                <div className="product-info">
+                                                    <strong>{obtenerNombreProducto(prod)}</strong>
+                                                    <span className="product-code">
+                                                        {obtenerCodigoProducto(prod)} | Stock: {obtenerStockProducto(prod)}
+                                                    </span>
+                                                </div>
+                                                <span className="product-price">
+                                                    {formatearMoneda(obtenerPrecioProducto(prod))}
                                                 </span>
+                                                <button
+                                                    type="button"
+                                                    className="btn-add-item"
+                                                    onClick={() => agregarAlCarrito(prod)}
+                                                >
+                                                    + Agregar
+                                                </button>
                                             </div>
-                                            <span className="product-price">
-                                                {formatearMoneda(prod.precio)}
-                                            </span>
-                                            <button
-                                                type="button"
-                                                className="btn-add-item"
-                                                onClick={() => agregarAlCarrito(prod)}
-                                            >
-                                                + Agregar
-                                            </button>
-                                        </div>
-                                    ))
+                                        );
+                                    })
                                 )}
                             </div>
                         </div>

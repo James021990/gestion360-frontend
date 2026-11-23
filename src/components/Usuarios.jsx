@@ -254,10 +254,21 @@ export default function Usuarios({
         return nombre.includes(texto) || email.includes(texto);
     });
 
+    const correoUsuarioActual =
+        typeof usuarioActual === "string"
+            ? usuarioActual
+            : usuarioActual?.correo || usuarioActual?.email || "";
+
+    const nombreUsuarioActual =
+        typeof usuarioActual === "string"
+            ? usuarioActual
+            : usuarioActual?.nombre_completo || usuarioActual?.nombre || "";
+
     const usuarioLogueado = usuarios.find(
-        (u) => (u.correo || "").toLowerCase() === String(usuarioActual || "").toLowerCase()
+        (u) => (u.correo || "").toLowerCase() === correoUsuarioActual.toLowerCase()
     );
-    const nombreVisible = usuarioLogueado?.nombre_completo || usuarioActual || "Administrador";
+    const nombreVisible =
+        usuarioLogueado?.nombre_completo || nombreUsuarioActual || "Administrador";
 
     const esModoEdicion = Boolean(usuarioEditando);
 

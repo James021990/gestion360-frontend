@@ -7,6 +7,7 @@ export default function Dashboard({
                                       usuarioCorreo,
                                       onIrUsuarios,
                                       onIrInventario,
+                                      onIrProductos,
                                       onIrCategorias,
                                       onIrVentas,
                                       onIrHistorialFacturas,
@@ -27,42 +28,53 @@ export default function Dashboard({
 
     const manejarCerrarSesion = (e) => {
         e.preventDefault();
+        setMenuAbierto(null);
         if (typeof onCerrarSesion === "function") {
             onCerrarSesion();
         }
     };
 
     const manejarClicEnlace = (e, enlace) => {
+        if (!enlace?.vista) return;
+        e.preventDefault();
+        setMenuAbierto(null);
+
         if (enlace.vista === "usuarios") {
-            e.preventDefault();
             if (typeof onIrUsuarios === "function") {
                 onIrUsuarios();
             }
-        } else if (enlace.vista === "inventario") {
-            e.preventDefault();
-            if (typeof onIrInventario === "function") {
+        } else if (enlace.vista === "inventario" || enlace.vista === "productos") {
+            if (typeof onIrProductos === "function") {
+                onIrProductos();
+            } else if (typeof onIrInventario === "function") {
                 onIrInventario();
             }
         } else if (enlace.vista === "categorias") {
-            e.preventDefault();
             if (typeof onIrCategorias === "function") {
                 onIrCategorias();
             }
         } else if (enlace.vista === "ventas") {
-            e.preventDefault();
             if (typeof onIrVentas === "function") {
                 onIrVentas();
             }
         } else if (enlace.vista === "historial-facturas") {
-            e.preventDefault();
             if (typeof onIrHistorialFacturas === "function") {
                 onIrHistorialFacturas();
             }
         } else if (enlace.vista === "clientes") {
-            e.preventDefault();
             if (typeof onIrClientes === "function") {
                 onIrClientes();
             }
+        }
+    };
+
+    const manejarVerTodasVentas = (e) => {
+        if (typeof onIrHistorialFacturas === "function") {
+            e.preventDefault();
+            onIrHistorialFacturas();
+        } else if (typeof onIrVentas === "function") {
+            e.preventDefault();
+            onIrVentas();
         }
     };
 
@@ -338,7 +350,11 @@ export default function Dashboard({
                     <section className="table-card">
                         <div className="card-header">
                             <h2>Últimas Ventas Registradas</h2>
-                            <a href="#ventas" className="view-all">
+                            <a
+                                href="#ventas"
+                                className="view-all"
+                                onClick={manejarVerTodasVentas}
+                            >
                                 Ver todas →
                             </a>
                         </div>
