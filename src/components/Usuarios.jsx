@@ -10,7 +10,7 @@ export default function Usuarios({ usuarioActual, onIrDashboard }) {
     const [roles, setRoles] = useState([]);
     const [busqueda, setBusqueda] = useState("");
     const [modalAbierto, setModalAbierto] = useState(false);
-    
+
     const [usuarioEditando, setUsuarioEditando] = useState(null);
 
     const [nombreCompleto, setNombreCompleto] = useState("");
