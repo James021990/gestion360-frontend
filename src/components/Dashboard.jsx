@@ -7,6 +7,7 @@ export default function Dashboard({
                                       usuarioCorreo,
                                       onIrUsuarios,
                                       onIrInventario,
+                                      onIrCategorias,
                                       onIrVentas,
                                       onIrHistorialFacturas,
                                       onIrClientes,
@@ -41,6 +42,11 @@ export default function Dashboard({
             e.preventDefault();
             if (typeof onIrInventario === "function") {
                 onIrInventario();
+            }
+        } else if (enlace.vista === "categorias") {
+            e.preventDefault();
+            if (typeof onIrCategorias === "function") {
+                onIrCategorias();
             }
         } else if (enlace.vista === "ventas") {
             e.preventDefault();
@@ -143,7 +149,7 @@ export default function Dashboard({
                 { texto: "Catálogo Productos", href: "#catalogo", vista: "inventario" },
                 { texto: "Entradas / Salidas", href: "#movimientos" },
                 { texto: "Alertas de Stock", href: "#alertas" },
-                { texto: "Categorías", href: "#categorias" },
+                { texto: "Categorías", href: "#categorias", vista: "categorias" },
             ],
         },
         {
@@ -199,8 +205,8 @@ export default function Dashboard({
                                             transform: estaAbierto ? "rotate(90deg)" : "rotate(0deg)",
                                         }}
                                     >
-                    ▸
-                  </span>
+                                        ▸
+                                    </span>
                                 </button>
 
                                 {estaAbierto && (
@@ -258,8 +264,8 @@ export default function Dashboard({
                             <div className="user-info">
                                 <span className="user-name">Yeins Gómez</span>
                                 <span className="user-role">
-                  {usuarioCorreo ? `Administrador · ${usuarioCorreo}` : "Administrador"}
-                </span>
+                                    {usuarioCorreo ? `Administrador · ${usuarioCorreo}` : "Administrador"}
+                                </span>
                             </div>
                         </div>
                     </div>
