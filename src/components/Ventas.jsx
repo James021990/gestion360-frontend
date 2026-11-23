@@ -32,18 +32,46 @@ export default function Ventas({
     const obtenerIdCliente = (cli) => cli?.id_clientes ?? cli?.idCliente ?? cli?.id;
     const obtenerNitCliente = (cli) => cli?.nit_o_cc ?? cli?.nitOCc ?? "";
     const obtenerNombreCliente = (cli) =>
-        cli?.nombre_o_razon_social ?? cli?.nombreORazonSocial ?? "Cliente";
+        cli?.nombre_o_razon_social ?? cli?.nombreORazonSocial ?? cli?.nombre ?? "Cliente";
 
-    const obtenerIdProducto = (prod) => prod?.id_producto ?? prod?.idProducto ?? prod?.id;
+    const obtenerIdProducto = (prod) =>
+        prod?.id_productos ??
+        prod?.id_producto ??
+        prod?.idProducto ??
+        prod?.idProductos ??
+        prod?.id;
+
     const obtenerCodigoProducto = (prod) =>
         prod?.codigo ?? prod?.codigo_producto ?? prod?.codigoProducto ?? "SIN-COD";
+
     const obtenerNombreProducto = (prod) =>
         prod?.nombre ?? prod?.nombre_producto ?? prod?.nombreProducto ?? "Producto";
-    const obtenerPrecioProducto = (prod) =>
-        Number(prod?.precio ?? prod?.precio_unitario ?? prod?.precioUnitario ?? 0);
-    const obtenerStockProducto = (prod) => {
-        const rawStock = prod?.stock ?? prod?.cantidad_stock ?? prod?.cantidadStock ?? prod?.cantidad;
-        return rawStock === undefined || rawStock === null ? "—" : rawStock;
+
+    const obtenerPrecioProducto = (prod) => {
+        const precio = Number(prod?.precio ?? prod?.precio_unitario ?? prod?.precioUnitario ?? 0);
+        return Number.isFinite(precio) && precio >= 0 ? precio : 0;
+    };
+
+    const obtenerStockNumerico = (prod) => {
+        const rawStock =
+            prod?.stock ?? prod?.cantidad_stock ?? prod?.cantidadStock ?? prod?.cantidad;
+        if (rawStock === undefined || rawStock === null || rawStock === "") return null;
+        const num = Number(rawStock);
+        return Number.isFinite(num) ? num : null;
+    };
+
+    const obtenerStockTexto = (prod) => {
+        const stockNum = obtenerStockNumerico(prod);
+        return stockNum === null ? "—" : stockNum;
+    };
+
+    const cargarProductos = async () => {
+        const resProductos = await fetch(API_PRODUCTOS_URL);
+        if (!resProductos.ok) {
+            throw new Error(`Error al cargar productos (${resProductos.status})`);
+        }
+        const dataProductos = await resProductos.json();
+        return Array.isArray(dataProductos) ? dataProductos : [];
     };
 
     useEffect(() => {
@@ -51,27 +79,20 @@ export default function Ventas({
 
         const cargarDatosIniciales = async () => {
             try {
-                const [resClientes, resProductos] = await Promise.all([
+                const [resClientes, listaProductos] = await Promise.all([
                     fetch(API_CLIENTES_URL),
-                    fetch(API_PRODUCTOS_URL),
+                    cargarProductos(),
                 ]);
 
                 if (!resClientes.ok) {
                     throw new Error(`Error al cargar clientes (${resClientes.status})`);
                 }
-                if (!resProductos.ok) {
-                    throw new Error(`Error al cargar productos (${resProductos.status})`);
-                }
 
-                const [dataClientes, dataProductos] = await Promise.all([
-                    resClientes.json(),
-                    resProductos.json(),
-                ]);
+                const dataClientes = await resClientes.json();
 
                 if (!activo) return;
 
                 const listaClientes = Array.isArray(dataClientes) ? dataClientes : [];
-                const listaProductos = Array.isArray(dataProductos) ? dataProductos : [];
 
                 setClientes(listaClientes);
                 setProductos(listaProductos);
@@ -95,7 +116,7 @@ export default function Ventas({
             }
         };
 
-        cargarDatosIniciales();
+        void cargarDatosIniciales();
 
         return () => {
             activo = false;
@@ -103,57 +124,94 @@ export default function Ventas({
     }, []);
 
     const formatearMoneda = (valor) => {
+        const numero = Number(valor);
         return new Intl.NumberFormat("es-CO", {
             style: "currency",
             currency: "COP",
             minimumFractionDigits: 0,
-        }).format(Number(valor) || 0);
+        }).format(Number.isFinite(numero) ? numero : 0);
     };
 
-    const agregarAlCarrito = (producto) => {
-        const idProd = obtenerIdProducto(producto);
-        if (idProd === undefined || idProd === null) return;
+    const agregarAlCarrito = (producto, indiceFallback = 0) => {
+        const rawId = obtenerIdProducto(producto);
+        const codigoProd = obtenerCodigoProducto(producto);
+        const nombreProd = obtenerNombreProducto(producto);
+        const claveItem =
+            rawId !== undefined && rawId !== null
+                ? String(rawId)
+                : `${codigoProd}-${nombreProd}-${indiceFallback}`;
+
+        const idNumerico =
+            rawId !== undefined && rawId !== null && !Number.isNaN(Number(rawId))
+                ? Number(rawId)
+                : null;
 
         const precioProd = obtenerPrecioProducto(producto);
-        const nombreProd = obtenerNombreProducto(producto);
-        const codigoProd = obtenerCodigoProducto(producto);
-        const stockProd = obtenerStockProducto(producto);
+        const stockNum = obtenerStockNumerico(producto);
 
+        if (stockNum !== null && stockNum <= 0) {
+            setEsError(true);
+            setMensaje(`"${nombreProd}" no tiene stock disponible.`);
+            return;
+        }
+
+        setEsError(false);
         setMensaje("");
+
         setCarrito((prevCarrito) => {
-            const existe = prevCarrito.find((item) => item.id === idProd);
-            if (existe) {
-                return prevCarrito.map((item) =>
-                    item.id === idProd
-                        ? { ...item, cantidad: item.cantidad + 1 }
+            const indiceExistente = prevCarrito.findIndex((item) => item.clave === claveItem);
+            if (indiceExistente >= 0) {
+                const itemActual = prevCarrito[indiceExistente];
+                const siguienteCantidad = itemActual.cantidad + 1;
+
+                if (itemActual.stockMax !== null && siguienteCantidad > itemActual.stockMax) {
+                    setEsError(true);
+                    setMensaje(`Solo hay ${itemActual.stockMax} unidades de "${nombreProd}".`);
+                    return prevCarrito;
+                }
+
+                return prevCarrito.map((item, idx) =>
+                    idx === indiceExistente
+                        ? { ...item, cantidad: siguienteCantidad }
                         : item
                 );
             }
+
             return [
                 ...prevCarrito,
                 {
-                    id: idProd,
+                    clave: claveItem,
+                    id: idNumerico,
                     codigo: codigoProd,
                     nombre: nombreProd,
                     precio: precioProd,
-                    stock: stockProd,
+                    stock: stockNum === null ? "—" : stockNum,
+                    stockMax: stockNum,
                     cantidad: 1,
                 },
             ];
         });
     };
 
-    const cambiarCantidad = (id, nuevaCantidad) => {
-        const cantidadValida = nuevaCantidad > 0 ? nuevaCantidad : 1;
+    const cambiarCantidad = (clave, nuevaCantidad) => {
+        const parsed = Number.parseInt(nuevaCantidad, 10);
+        const cantidadSolicitada = Number.isNaN(parsed) || parsed < 1 ? 1 : parsed;
+
         setCarrito((prevCarrito) =>
-            prevCarrito.map((item) =>
-                item.id === id ? { ...item, cantidad: cantidadValida } : item
-            )
+            prevCarrito.map((item) => {
+                if (item.clave !== clave) return item;
+                if (item.stockMax !== null && cantidadSolicitada > item.stockMax) {
+                    setEsError(true);
+                    setMensaje(`Stock máximo disponible para "${item.nombre}": ${item.stockMax}.`);
+                    return { ...item, cantidad: Math.max(1, item.stockMax) };
+                }
+                return { ...item, cantidad: cantidadSolicitada };
+            })
         );
     };
 
-    const eliminarDelCarrito = (id) => {
-        setCarrito((prevCarrito) => prevCarrito.filter((item) => item.id !== id));
+    const eliminarDelCarrito = (clave) => {
+        setCarrito((prevCarrito) => prevCarrito.filter((item) => item.clave !== clave));
     };
 
     const limpiarFactura = () => {
@@ -161,11 +219,12 @@ export default function Ventas({
         if (window.confirm("¿Estás seguro de vaciar la factura actual?")) {
             setCarrito([]);
             setMensaje("");
+            setEsError(false);
         }
     };
 
     const subtotal = carrito.reduce(
-        (acumulado, item) => acumulado + Number(item.precio) * Number(item.cantidad),
+        (acumulado, item) => acumulado + Number(item.precio || 0) * Number(item.cantidad || 0),
         0
     );
     const iva = Math.round(subtotal * 0.19);
@@ -181,6 +240,15 @@ export default function Ventas({
         if (carrito.length === 0) {
             setEsError(true);
             setMensaje("Debes agregar al menos un producto para procesar la venta.");
+            return;
+        }
+
+        const productoSinId = carrito.find(
+            (item) => !Number.isFinite(Number(item.id)) || Number(item.id) <= 0
+        );
+        if (productoSinId) {
+            setEsError(true);
+            setMensaje(`El producto "${productoSinId.nombre}" no tiene un ID válido.`);
             return;
         }
 
@@ -215,12 +283,13 @@ export default function Ventas({
             }
 
             const facturaCreada = await resFactura.json();
-            const idFacturaCreada = facturaCreada.id_factura;
+            const idFacturaCreada =
+                facturaCreada.id_factura ?? facturaCreada.idFactura ?? facturaCreada.id;
 
             await Promise.all(
                 carrito.map(async (item) => {
-                    const cantidadNum = Number(item.cantidad);
-                    const precioNum = Number(item.precio);
+                    const cantidadNum = Number(item.cantidad) || 1;
+                    const precioNum = Number(item.precio) || 0;
                     const subtotalLineal = cantidadNum * precioNum;
                     const idProductoNum = Number(item.id);
 
@@ -229,7 +298,7 @@ export default function Ventas({
                         precio: precioNum,
                         subtotal_lineal: subtotalLineal,
                         factura: { id_factura: idFacturaCreada },
-                        producto: { id_producto: idProductoNum, id: idProductoNum },
+                        producto: { id_productos: idProductoNum },
                     };
 
                     const resDetalle = await fetch(API_DETALLE_URL, {
@@ -252,6 +321,13 @@ export default function Ventas({
             setMensaje(
                 `¡Venta procesada con éxito! Factura ${facturaCreada.numero_factura || numeroGenerado} registrada.`
             );
+
+            try {
+                const actualizados = await cargarProductos();
+                setProductos(actualizados);
+            } catch {
+                // No bloquear el mensaje de éxito si falla la recarga secundaria
+            }
         } catch (error) {
             setEsError(true);
             setMensaje(`No se pudo completar la facturación: ${error.message}`);
@@ -261,7 +337,8 @@ export default function Ventas({
     };
 
     const productosFiltrados = productos.filter((prod) => {
-        const texto = busqueda.toLowerCase();
+        const texto = busqueda.trim().toLowerCase();
+        if (!texto) return true;
         return (
             obtenerNombreProducto(prod).toLowerCase().includes(texto) ||
             String(obtenerCodigoProducto(prod)).toLowerCase().includes(texto)
@@ -332,12 +409,12 @@ export default function Ventas({
                                         ) : clientes.length === 0 ? (
                                             <option value="">No hay clientes registrados</option>
                                         ) : (
-                                            clientes.map((cli) => {
+                                            clientes.map((cli, idx) => {
                                                 const id = obtenerIdCliente(cli);
                                                 const nombre = obtenerNombreCliente(cli);
                                                 const nit = obtenerNitCliente(cli);
                                                 return (
-                                                    <option key={id} value={String(id)}>
+                                                    <option key={id ?? idx} value={String(id ?? idx)}>
                                                         {nit ? `${nombre} - NIT/CC ${nit}` : nombre}
                                                     </option>
                                                 );
@@ -382,14 +459,17 @@ export default function Ventas({
                                         No se encontraron productos registrados con ese criterio.
                                     </p>
                                 ) : (
-                                    productosFiltrados.map((prod) => {
+                                    productosFiltrados.map((prod, idx) => {
                                         const idProd = obtenerIdProducto(prod);
                                         return (
-                                            <div key={idProd} className="product-item">
+                                            <div
+                                                key={idProd ?? `${obtenerCodigoProducto(prod)}-${idx}`}
+                                                className="product-item"
+                                            >
                                                 <div className="product-info">
                                                     <strong>{obtenerNombreProducto(prod)}</strong>
                                                     <span className="product-code">
-                                                        {obtenerCodigoProducto(prod)} | Stock: {obtenerStockProducto(prod)}
+                                                        {obtenerCodigoProducto(prod)} | Stock: {obtenerStockTexto(prod)}
                                                     </span>
                                                 </div>
                                                 <span className="product-price">
@@ -398,7 +478,7 @@ export default function Ventas({
                                                 <button
                                                     type="button"
                                                     className="btn-add-item"
-                                                    onClick={() => agregarAlCarrito(prod)}
+                                                    onClick={() => agregarAlCarrito(prod, idx)}
                                                 >
                                                     + Agregar
                                                 </button>
@@ -441,7 +521,7 @@ export default function Ventas({
                                         </tr>
                                     ) : (
                                         carrito.map((item) => (
-                                            <tr key={item.id}>
+                                            <tr key={item.clave}>
                                                 <td>
                                                     <strong>{item.nombre}</strong>
                                                     <small>{item.codigo}</small>
@@ -453,10 +533,7 @@ export default function Ventas({
                                                         className="qty-input"
                                                         value={item.cantidad}
                                                         onChange={(e) =>
-                                                            cambiarCantidad(
-                                                                item.id,
-                                                                parseInt(e.target.value, 10)
-                                                            )
+                                                            cambiarCantidad(item.clave, e.target.value)
                                                         }
                                                     />
                                                 </td>
@@ -470,7 +547,7 @@ export default function Ventas({
                                                     <button
                                                         type="button"
                                                         className="btn-remove"
-                                                        onClick={() => eliminarDelCarrito(item.id)}
+                                                        onClick={() => eliminarDelCarrito(item.clave)}
                                                         title="Eliminar"
                                                     >
                                                         🗑️

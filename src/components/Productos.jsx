@@ -2,41 +2,26 @@ import { useEffect, useMemo, useState } from "react";
 import Header from "./Header";
 import "../styles/productos.css";
 
-const API_PRODUCTOS = "http://localhost:8080/api/productos";
-const API_CATEGORIAS = "http://localhost:8080/api/categorias";
+const API_PRODUCTOS_URL = "http://localhost:8080/api/productos";
+const API_CATEGORIAS_URL = "http://localhost:8080/api/categorias";
 
-const FORM_VACIO = {
+const FORMULARIO_VACIO = {
     codigo: "",
     nombre: "",
     categoriaId: "",
+    categoriaNombre: "",
     precio: "",
     stock: "",
     stockMinimo: "10",
     estado: "Activo",
 };
 
-const formatoCOP = (valor) =>
-    new Intl.NumberFormat("es-CO", {
+const formatearMoneda = (valor) => {
+    return new Intl.NumberFormat("es-CO", {
         style: "currency",
         currency: "COP",
         maximumFractionDigits: 0,
     }).format(Number(valor) || 0);
-
-const getIdProd = (p) => p?.id_producto ?? p?.idProducto ?? p?.id;
-const getCodigo = (p) => p?.codigo ?? p?.codigo_producto ?? p?.codigoProducto ?? "";
-const getNombre = (p) => p?.nombre ?? p?.nombre_producto ?? p?.nombreProducto ?? "";
-const getPrecio = (p) => Number(p?.precio ?? p?.precio_unitario ?? p?.precioUnitario ?? 0);
-const getStock = (p) =>
-    Number(p?.stock ?? p?.cantidad_stock ?? p?.cantidadStock ?? p?.cantidad ?? 0);
-const getStockMin = (p) => Number(p?.stock_minimo ?? p?.stockMinimo ?? 10);
-const getEstado = (p) =>
-    String(p?.estado ?? "Activo").toUpperCase() === "INACTIVO" ? "Inactivo" : "Activo";
-
-const getIdCat = (c) => c?.id_categoria ?? c?.idCategoria ?? c?.id ?? "";
-const getNombreCat = (c) => {
-    if (!c) return "";
-    if (typeof c === "string") return c;
-    return c?.nombre_categoria ?? c?.nombreCategoria ?? c?.nombre ?? "";
 };
 
 export default function Productos({
@@ -53,245 +38,337 @@ export default function Productos({
     const [busqueda, setBusqueda] = useState("");
     const [categoriaFiltro, setCategoriaFiltro] = useState("Todas");
     const [modalAbierto, setModalAbierto] = useState(false);
-    const [editando, setEditando] = useState(null);
-    const [form, setForm] = useState(FORM_VACIO);
-    const [alerta, setAlerta] = useState(null);
+    const [productoEditando, setProductoEditando] = useState(null);
+    const [formulario, setFormulario] = useState(FORMULARIO_VACIO);
+    const [mensaje, setMensaje] = useState(null);
 
-    const mostrarAlerta = (tipo, texto) => {
-        setAlerta({ tipo, texto });
-        setTimeout(() => setAlerta(null), 4000);
+    const obtenerIdProducto = (prod) =>
+        prod?.id_producto ??
+        prod?.idProducto ??
+        prod?.id_productos ??
+        prod?.idProductos ??
+        prod?.idProd ??
+        prod?.id;
+    const obtenerCodigo = (prod) =>
+        prod?.codigo ?? prod?.codigo_producto ?? prod?.codigoProducto ?? "";
+    const obtenerNombre = (prod) =>
+        prod?.nombre ?? prod?.nombre_producto ?? prod?.nombreProducto ?? "";
+    const obtenerPrecio = (prod) =>
+        Number(prod?.precio ?? prod?.precio_unitario ?? prod?.precioUnitario ?? 0);
+    const obtenerStock = (prod) =>
+        Number(prod?.stock ?? prod?.cantidad_stock ?? prod?.cantidadStock ?? prod?.cantidad ?? 0);
+    const obtenerStockMinimo = (prod) =>
+        Number(prod?.stock_minimo ?? prod?.stockMinimo ?? 10);
+    const obtenerEstado = (prod) => {
+        const raw = prod?.estado ?? "Activo";
+        return String(raw).toUpperCase() === "INACTIVO" ? "Inactivo" : "Activo";
     };
 
-    const getCategoriaTexto = (prod) => {
+    const obtenerIdCategoria = (cat) =>
+        cat?.id_categoria ?? cat?.idCategoria ?? cat?.id ?? "";
+    const obtenerNombreCategoria = (cat) => {
+        if (!cat) return "";
+        if (typeof cat === "string") return cat;
+        return cat?.nombre_categoria ?? cat?.nombreCategoria ?? cat?.nombre ?? "";
+    };
+
+    const obtenerCategoriaTextoProducto = (prod) => {
         if (prod?.categoria) {
-            const directo = getNombreCat(prod.categoria);
-            if (directo) return directo;
-            const idC = getIdCat(prod.categoria);
-            const match = categorias.find((c) => String(getIdCat(c)) === String(idC));
-            if (match) return getNombreCat(match);
+            const nombreDirecto = obtenerNombreCategoria(prod.categoria);
+            if (nombreDirecto) return nombreDirecto;
+            const idCat = obtenerIdCategoria(prod.categoria);
+            const encontrada = categorias.find(
+                (c) => String(obtenerIdCategoria(c)) === String(idCat)
+            );
+            if (encontrada) return obtenerNombreCategoria(encontrada);
         }
         return prod?.nombre_categoria || prod?.categoria_nombre || "Sin categoría";
     };
 
-    const cargarDatos = async () => {
+    const mostrarAlerta = (tipo, texto) => {
+        setMensaje({ tipo, texto });
+        setTimeout(() => {
+            setMensaje(null);
+        }, 4000);
+    };
+
+    const cargarDatosBackend = async () => {
         setCargando(true);
         try {
-            const [rProd, rCat] = await Promise.all([
-                fetch(API_PRODUCTOS),
-                fetch(API_CATEGORIAS).catch(() => null),
+            const [resProd, resCat] = await Promise.all([
+                fetch(API_PRODUCTOS_URL),
+                fetch(API_CATEGORIAS_URL).catch(() => null),
             ]);
-            if (!rProd.ok) throw new Error(`HTTP ${rProd.status}`);
-            const dProd = await rProd.json();
-            setProductos(Array.isArray(dProd) ? dProd : []);
-            if (rCat && rCat.ok) {
-                const dCat = await rCat.json();
-                setCategorias(Array.isArray(dCat) ? dCat : []);
+
+            if (!resProd.ok) {
+                throw new Error(`Error al cargar productos (${resProd.status})`);
             }
-        } catch (err) {
-            mostrarAlerta("error", `Error al cargar productos: ${err.message}`);
+
+            const dataProd = await resProd.json();
+            setProductos(Array.isArray(dataProd) ? dataProd : []);
+
+            if (resCat && resCat.ok) {
+                const dataCat = await resCat.json();
+                setCategorias(Array.isArray(dataCat) ? dataCat : []);
+            }
+        } catch (error) {
+            mostrarAlerta("error", `No se pudieron cargar los productos: ${error.message}`);
         } finally {
             setCargando(false);
         }
     };
 
     useEffect(() => {
-        let montado = true;
-        (async () => {
+        let activo = true;
+
+        const inicializar = async () => {
             try {
-                const [rProd, rCat] = await Promise.all([
-                    fetch(API_PRODUCTOS),
-                    fetch(API_CATEGORIAS).catch(() => null),
+                const [resProd, resCat] = await Promise.all([
+                    fetch(API_PRODUCTOS_URL),
+                    fetch(API_CATEGORIAS_URL).catch(() => null),
                 ]);
-                if (!rProd.ok) throw new Error(`HTTP ${rProd.status}`);
-                const [dProd, dCat] = await Promise.all([
-                    rProd.json(),
-                    rCat && rCat.ok ? rCat.json() : Promise.resolve([]),
-                ]);
-                if (montado) {
-                    setProductos(Array.isArray(dProd) ? dProd : []);
-                    setCategorias(Array.isArray(dCat) ? dCat : []);
+
+                if (!resProd.ok) {
+                    throw new Error(`Error al cargar productos (${resProd.status})`);
                 }
-            } catch (err) {
-                if (montado) {
-                    setAlerta({
+
+                const [dataProd, dataCat] = await Promise.all([
+                    resProd.json(),
+                    resCat && resCat.ok ? resCat.json() : Promise.resolve([]),
+                ]);
+
+                if (activo) {
+                    setProductos(Array.isArray(dataProd) ? dataProd : []);
+                    setCategorias(Array.isArray(dataCat) ? dataCat : []);
+                }
+            } catch (error) {
+                if (activo) {
+                    setMensaje({
                         tipo: "error",
-                        texto: `No se pudieron cargar los productos: ${err.message}`,
+                        texto: `No se pudieron cargar los productos desde la base de datos: ${error.message}`,
                     });
                 }
             } finally {
-                if (montado) setCargando(false);
+                if (activo) {
+                    setCargando(false);
+                }
             }
-        })();
+        };
+
+        void inicializar();
+
         return () => {
-            montado = false;
+            activo = false;
         };
     }, []);
 
-    const opcionesCategoria = useMemo(() => {
-        const deCat = categorias.map((c) => getNombreCat(c)).filter(Boolean);
-        const deProd = productos.map((p) => getCategoriaTexto(p)).filter(Boolean);
-        return ["Todas", ...new Set([...deCat, ...deProd])];
+    const categoriasDisponibles = useMemo(() => {
+        const nombresCat = categorias.map((c) => obtenerNombreCategoria(c)).filter(Boolean);
+        const desdeProductos = productos
+            .map((p) => obtenerCategoriaTextoProducto(p))
+            .filter(Boolean);
+        return ["Todas", ...new Set([...nombresCat, ...desdeProductos])];
     }, [categorias, productos]);
 
-    const filtrados = useMemo(() => {
-        const q = busqueda.trim().toLowerCase();
-        return productos.filter((p) => {
-            const catTxt = getCategoriaTexto(p);
-            const okCat = categoriaFiltro === "Todas" || catTxt === categoriaFiltro;
-            const okTxt =
-                !q ||
-                getCodigo(p).toLowerCase().includes(q) ||
-                getNombre(p).toLowerCase().includes(q) ||
-                catTxt.toLowerCase().includes(q);
-            return okCat && okTxt;
+    const productosFiltrados = useMemo(() => {
+        return productos.filter((prod) => {
+            const catTexto = obtenerCategoriaTextoProducto(prod);
+            const coincideCategoria =
+                categoriaFiltro === "Todas" || catTexto === categoriaFiltro;
+
+            const texto = busqueda.trim().toLowerCase();
+            const coincideTexto =
+                !texto ||
+                obtenerCodigo(prod).toLowerCase().includes(texto) ||
+                obtenerNombre(prod).toLowerCase().includes(texto) ||
+                catTexto.toLowerCase().includes(texto);
+
+            return coincideCategoria && coincideTexto;
         });
     }, [productos, categorias, busqueda, categoriaFiltro]);
 
-    const abrirCrear = () => {
-        const primeraId = categorias.length > 0 ? String(getIdCat(categorias[0])) : "";
-        setEditando(null);
-        setForm({ ...FORM_VACIO, categoriaId: primeraId });
+    const abrirModalCrear = () => {
+        const primeraCatId =
+            categorias.length > 0 ? String(obtenerIdCategoria(categorias[0])) : "";
+        const primeraCatNombre =
+            categorias.length > 0 ? obtenerNombreCategoria(categorias[0]) : "";
+        setProductoEditando(null);
+        setFormulario({
+            ...FORMULARIO_VACIO,
+            categoriaId: primeraCatId,
+            categoriaNombre: primeraCatNombre,
+        });
         setModalAbierto(true);
     };
 
-    const abrirEditar = (prod) => {
-        setEditando(prod);
-        setForm({
-            codigo: getCodigo(prod),
-            nombre: getNombre(prod),
-            categoriaId: String(getIdCat(prod?.categoria)),
-            precio: String(getPrecio(prod)),
-            stock: String(getStock(prod)),
-            stockMinimo: String(getStockMin(prod)),
-            estado: getEstado(prod),
+    const abrirModalEditar = (producto) => {
+        const idCatActual = obtenerIdCategoria(producto?.categoria);
+        const nombreCatActual = obtenerCategoriaTextoProducto(producto);
+        setProductoEditando(producto);
+        setFormulario({
+            codigo: obtenerCodigo(producto),
+            nombre: obtenerNombre(producto),
+            categoriaId: idCatActual ? String(idCatActual) : "",
+            categoriaNombre: nombreCatActual,
+            precio: String(obtenerPrecio(producto)),
+            stock: String(obtenerStock(producto)),
+            stockMinimo: String(obtenerStockMinimo(producto)),
+            estado: obtenerEstado(producto),
         });
         setModalAbierto(true);
     };
 
     const cerrarModal = () => {
         setModalAbierto(false);
-        setEditando(null);
-        setForm(FORM_VACIO);
+        setProductoEditando(null);
+        setFormulario(FORMULARIO_VACIO);
     };
 
-    const onChangeForm = (e) => {
+    const manejarCambioFormulario = (e) => {
         const { name, value } = e.target;
-        setForm((prev) => ({ ...prev, [name]: value }));
+        if (name === "categoriaId") {
+            const catSeleccionada = categorias.find(
+                (c) => String(obtenerIdCategoria(c)) === String(value)
+            );
+            setFormulario((prev) => ({
+                ...prev,
+                categoriaId: value,
+                categoriaNombre: catSeleccionada ? obtenerNombreCategoria(catSeleccionada) : "",
+            }));
+            return;
+        }
+        setFormulario((prev) => ({
+            ...prev,
+            [name]: value,
+        }));
     };
 
-    const buildPayload = (datos, base = null) => {
-        const codigo = datos.codigo.trim().toUpperCase();
-        const nombre = datos.nombre.trim();
-        const precio = Number(datos.precio);
-        const stock = Number(datos.stock);
-        const stockMinimo = Number(datos.stockMinimo) || 0;
-        const idCat = datos.categoriaId ? Number(datos.categoriaId) : null;
-
-        const body = {
-            ...(base || {}),
-            codigo,
-            codigo_producto: codigo,
-            nombre,
-            nombre_producto: nombre,
-            precio,
-            precio_unitario: precio,
-            stock,
-            cantidad_stock: stock,
-            stock_minimo: stockMinimo,
-            stockMinimo,
+    const construirPayloadProducto = (datos, baseExistente = null) => {
+        const idCatNum = datos.categoriaId ? Number(datos.categoriaId) : null;
+        const payload = {
+            ...(baseExistente || {}),
+            codigo: datos.codigo.trim().toUpperCase(),
+            codigo_producto: datos.codigo.trim().toUpperCase(),
+            nombre: datos.nombre.trim(),
+            nombre_producto: datos.nombre.trim(),
+            precio: Number(datos.precio),
+            precio_unitario: Number(datos.precio),
+            stock: Number(datos.stock),
+            cantidad_stock: Number(datos.stock),
+            stock_minimo: Number(datos.stockMinimo) || 0,
+            stockMinimo: Number(datos.stockMinimo) || 0,
             estado: datos.estado,
         };
 
-        if (idCat) {
-            body.categoria = { id_categoria: idCat, id: idCat };
+        if (idCatNum) {
+            payload.categoria = { id_categoria: idCatNum, id: idCatNum };
         }
 
-        if (base) {
-            const idP = getIdProd(base);
-            if (idP !== undefined && idP !== null) {
-                body.id_producto = idP;
-                body.id = idP;
+        if (baseExistente) {
+            const idProd = obtenerIdProducto(baseExistente);
+            if (idProd !== undefined && idProd !== null) {
+                payload.id_producto = idProd;
+                payload.id = idProd;
             }
         }
-        return body;
+
+        return payload;
     };
 
-    const onGuardar = async (e) => {
+    const manejarGuardarProducto = async (e) => {
         e.preventDefault();
-        const codigo = form.codigo.trim().toUpperCase();
-        const nombre = form.nombre.trim();
-        const precio = Number(form.precio);
-        const stock = Number(form.stock);
 
-        if (!codigo || !nombre) {
+        const codigoLimpio = formulario.codigo.trim().toUpperCase();
+        const nombreLimpio = formulario.nombre.trim();
+        const precioNumero = Number(formulario.precio);
+        const stockNumero = Number(formulario.stock);
+
+        if (!codigoLimpio || !nombreLimpio) {
             mostrarAlerta("error", "Completa el código y el nombre del producto.");
             return;
         }
-        if (Number.isNaN(precio) || precio < 0 || Number.isNaN(stock) || stock < 0) {
-            mostrarAlerta("error", "Ingresa precio y stock válidos.");
+
+        if (Number.isNaN(precioNumero) || precioNumero < 0) {
+            mostrarAlerta("error", "Ingresa un precio unitario válido.");
+            return;
+        }
+
+        if (Number.isNaN(stockNumero) || stockNumero < 0) {
+            mostrarAlerta("error", "Ingresa una cantidad de stock válida.");
             return;
         }
 
         setGuardando(true);
-        const esEdit = Boolean(editando);
-        const idObj = getIdProd(editando);
-        const url = esEdit ? `${API_PRODUCTOS}/${idObj}` : API_PRODUCTOS;
-        const method = esEdit ? "PUT" : "POST";
+        const esEdicion = Boolean(productoEditando);
+        const idObjetivo = obtenerIdProducto(productoEditando);
+        const url = esEdicion ? `${API_PRODUCTOS_URL}/${idObjetivo}` : API_PRODUCTOS_URL;
+        const metodo = esEdicion ? "PUT" : "POST";
+
+        const payload = construirPayloadProducto(formulario, productoEditando);
 
         try {
-            const res = await fetch(url, {
-                method,
+            const respuesta = await fetch(url, {
+                method: metodo,
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(buildPayload(form, editando)),
+                body: JSON.stringify(payload),
             });
-            if (!res.ok) {
-                const txt = await res.text();
-                throw new Error(txt || `HTTP ${res.status}`);
+
+            if (!respuesta.ok) {
+                const textoError = await respuesta.text();
+                throw new Error(textoError || `Error al guardar producto (${respuesta.status})`);
             }
-            await cargarDatos();
+
+            await cargarDatosBackend();
             mostrarAlerta(
                 "exito",
-                esEdit ? `Producto "${nombre}" actualizado.` : `Producto "${nombre}" registrado.`
+                esEdicion
+                    ? `Producto "${nombreLimpio}" actualizado correctamente.`
+                    : `Producto "${nombreLimpio}" registrado en la base de datos.`
             );
             cerrarModal();
-        } catch (err) {
-            mostrarAlerta("error", `No se pudo guardar: ${err.message}`);
+        } catch (error) {
+            mostrarAlerta("error", `No se pudo guardar el producto: ${error.message}`);
         } finally {
             setGuardando(false);
         }
     };
 
-    const onToggleEstado = async (prod) => {
-        const idObj = getIdProd(prod);
-        if (!idObj) return;
-        const nuevoEstado = getEstado(prod) === "Activo" ? "Inactivo" : "Activo";
+    const alternarEstadoProducto = async (producto) => {
+        const idObjetivo = obtenerIdProducto(producto);
+        if (!idObjetivo) return;
+
+        const estadoActual = obtenerEstado(producto);
+        const nuevoEstado = estadoActual === "Activo" ? "Inactivo" : "Activo";
+
+        const payload = construirPayloadProducto(
+            {
+                codigo: obtenerCodigo(producto),
+                nombre: obtenerNombre(producto),
+                categoriaId: obtenerIdCategoria(producto?.categoria),
+                precio: obtenerPrecio(producto),
+                stock: obtenerStock(producto),
+                stockMinimo: obtenerStockMinimo(producto),
+                estado: nuevoEstado,
+            },
+            producto
+        );
+
         try {
-            const res = await fetch(`${API_PRODUCTOS}/${idObj}`, {
+            const respuesta = await fetch(`${API_PRODUCTOS_URL}/${idObjetivo}`, {
                 method: "PUT",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(
-                    buildPayload(
-                        {
-                            codigo: getCodigo(prod),
-                            nombre: getNombre(prod),
-                            categoriaId: getIdCat(prod?.categoria),
-                            precio: getPrecio(prod),
-                            stock: getStock(prod),
-                            stockMinimo: getStockMin(prod),
-                            estado: nuevoEstado,
-                        },
-                        prod
-                    )
-                ),
+                body: JSON.stringify(payload),
             });
-            if (!res.ok) {
-                const txt = await res.text();
-                throw new Error(txt || `HTTP ${res.status}`);
+
+            if (!respuesta.ok) {
+                const textoError = await respuesta.text();
+                throw new Error(textoError || `Error al actualizar estado (${respuesta.status})`);
             }
-            await cargarDatos();
-            mostrarAlerta("exito", `Estado actualizado a "${nuevoEstado}".`);
-        } catch (err) {
-            mostrarAlerta("error", `No se pudo cambiar el estado: ${err.message}`);
+
+            await cargarDatosBackend();
+            mostrarAlerta("exito", `Estado del producto actualizado a "${nuevoEstado}".`);
+        } catch (error) {
+            mostrarAlerta("error", `No se pudo cambiar el estado: ${error.message}`);
         }
     };
 
@@ -313,17 +390,22 @@ export default function Productos({
                             Administra el catálogo de productos y servicios, precios, stock y alertas
                         </p>
                     </div>
+
                     <button
                         id="btnRegistrarProducto"
                         type="button"
                         className="btn-nuevo-producto"
-                        onClick={abrirCrear}
+                        onClick={abrirModalCrear}
                     >
                         + Registrar Producto
                     </button>
                 </div>
 
-                {alerta && <div className={`feedback-banner ${alerta.tipo}`}>{alerta.texto}</div>}
+                {mensaje && (
+                    <div className={`feedback-banner ${mensaje.tipo}`}>
+                        {mensaje.texto}
+                    </div>
+                )}
 
                 <section className="card">
                     <div className="table-toolbar">
@@ -333,12 +415,13 @@ export default function Productos({
                             value={busqueda}
                             onChange={(e) => setBusqueda(e.target.value)}
                         />
+
                         <select
                             className="toolbar-select"
                             value={categoriaFiltro}
                             onChange={(e) => setCategoriaFiltro(e.target.value)}
                         >
-                            {opcionesCategoria.map((cat) => (
+                            {categoriasDisponibles.map((cat) => (
                                 <option key={cat} value={cat}>
                                     {cat === "Todas" ? "Todas las categorías" : cat}
                                 </option>
@@ -361,46 +444,72 @@ export default function Productos({
                         <tbody>
                         {cargando ? (
                             <tr>
-                                <td colSpan="7" style={{ textAlign: "center", padding: "24px", color: "#64748b" }}>
+                                <td
+                                    colSpan="7"
+                                    style={{ textAlign: "center", padding: "24px", color: "#64748b" }}
+                                >
                                     Cargando productos desde la base de datos...
                                 </td>
                             </tr>
-                        ) : filtrados.length === 0 ? (
+                        ) : productosFiltrados.length === 0 ? (
                             <tr>
-                                <td colSpan="7" style={{ textAlign: "center", padding: "24px", color: "#64748b" }}>
+                                <td
+                                    colSpan="7"
+                                    style={{ textAlign: "center", padding: "24px", color: "#64748b" }}
+                                >
                                     No hay productos registrados o que coincidan con el filtro.
                                 </td>
                             </tr>
                         ) : (
-                            filtrados.map((prod, idx) => {
-                                const idP = getIdProd(prod) ?? idx;
-                                const stockAct = getStock(prod);
-                                const stockMin = getStockMin(prod);
-                                const bajo = stockAct <= stockMin;
-                                const estado = getEstado(prod);
+                            productosFiltrados.map((prod, idx) => {
+                                const idProd = obtenerIdProducto(prod) ?? idx;
+                                const stockActual = obtenerStock(prod);
+                                const stockMin = obtenerStockMinimo(prod);
+                                const stockBajo = stockActual <= stockMin;
+                                const estadoActual = obtenerEstado(prod);
+                                const catTexto = obtenerCategoriaTextoProducto(prod);
+
                                 return (
-                                    <tr key={idP}>
-                                        <td><strong>{getCodigo(prod)}</strong></td>
-                                        <td>{getNombre(prod)}</td>
-                                        <td><span className="badge badge-user">{getCategoriaTexto(prod)}</span></td>
-                                        <td>{formatoCOP(getPrecio(prod))}</td>
+                                    <tr key={idProd}>
                                         <td>
-                        <span className={bajo ? "status-inactive" : "status-active"}>
-                          {bajo ? `▲ ${stockAct} (Bajo)` : `${stockAct} und.`}
-                        </span>
+                                            <strong>{obtenerCodigo(prod)}</strong>
+                                        </td>
+                                        <td>{obtenerNombre(prod)}</td>
+                                        <td>
+                                            <span className="badge badge-user">{catTexto}</span>
+                                        </td>
+                                        <td>{formatearMoneda(obtenerPrecio(prod))}</td>
+                                        <td>
+                                            <span className={stockBajo ? "status-inactive" : "status-active"}>
+                                                {stockBajo ? `▲ ${stockActual} (Bajo)` : `${stockActual} und.`}
+                                            </span>
                                         </td>
                                         <td>
-                        <span className={estado === "Activo" ? "status-active" : "status-inactive"}>
-                          ● {estado}
-                        </span>
+                                            <span
+                                                className={
+                                                    estadoActual === "Activo"
+                                                        ? "status-active"
+                                                        : "status-inactive"
+                                                }
+                                            >
+                                                ● {estadoActual}
+                                            </span>
                                         </td>
                                         <td>
                                             <div className="action-links">
-                                                <button type="button" className="btn-edit" onClick={() => abrirEditar(prod)}>
+                                                <button
+                                                    type="button"
+                                                    className="btn-edit"
+                                                    onClick={() => abrirModalEditar(prod)}
+                                                >
                                                     Editar
                                                 </button>
-                                                <button type="button" className="btn-delete" onClick={() => onToggleEstado(prod)}>
-                                                    {estado === "Activo" ? "Desactivar" : "Activar"}
+                                                <button
+                                                    type="button"
+                                                    className="btn-delete"
+                                                    onClick={() => alternarEstadoProducto(prod)}
+                                                >
+                                                    {estadoActual === "Activo" ? "Desactivar" : "Activar"}
                                                 </button>
                                             </div>
                                         </td>
@@ -417,13 +526,20 @@ export default function Productos({
                 <div className="modal-overlay" onClick={cerrarModal}>
                     <div className="modal-card" onClick={(e) => e.stopPropagation()}>
                         <div className="modal-header">
-                            <h2>{editando ? "Editar Producto" : "Registrar Nuevo Producto"}</h2>
-                            <button type="button" className="btn-close" onClick={cerrarModal} aria-label="Cerrar modal">
+                            <h2>
+                                {productoEditando ? "Editar Producto" : "Registrar Nuevo Producto"}
+                            </h2>
+                            <button
+                                type="button"
+                                className="btn-close"
+                                onClick={cerrarModal}
+                                aria-label="Cerrar modal"
+                            >
                                 ×
                             </button>
                         </div>
 
-                        <form className="modal-body" onSubmit={onGuardar}>
+                        <form className="modal-body" onSubmit={manejarGuardarProducto}>
                             <div className="form-row">
                                 <div className="form-group flex-1">
                                     <label htmlFor="codigo">Código</label>
@@ -432,25 +548,26 @@ export default function Productos({
                                         name="codigo"
                                         type="text"
                                         placeholder="Ej. COD-301"
-                                        value={form.codigo}
-                                        onChange={onChangeForm}
+                                        value={formulario.codigo}
+                                        onChange={manejarCambioFormulario}
                                         required
                                     />
                                 </div>
+
                                 <div className="form-group flex-1">
                                     <label htmlFor="categoriaId">Categoría</label>
                                     <select
                                         id="categoriaId"
                                         name="categoriaId"
-                                        value={form.categoriaId}
-                                        onChange={onChangeForm}
+                                        value={formulario.categoriaId}
+                                        onChange={manejarCambioFormulario}
                                     >
                                         <option value="">Selecciona una categoría</option>
-                                        {categorias.map((c) => {
-                                            const idC = getIdCat(c);
+                                        {categorias.map((cat) => {
+                                            const idCat = obtenerIdCategoria(cat);
                                             return (
-                                                <option key={idC} value={String(idC)}>
-                                                    {getNombreCat(c)}
+                                                <option key={idCat} value={String(idCat)}>
+                                                    {obtenerNombreCategoria(cat)}
                                                 </option>
                                             );
                                         })}
@@ -465,8 +582,8 @@ export default function Productos({
                                     name="nombre"
                                     type="text"
                                     placeholder="Nombre del producto o servicio"
-                                    value={form.nombre}
-                                    onChange={onChangeForm}
+                                    value={formulario.nombre}
+                                    onChange={manejarCambioFormulario}
                                     required
                                 />
                             </div>
@@ -481,11 +598,12 @@ export default function Productos({
                                         min="0"
                                         step="100"
                                         placeholder="0"
-                                        value={form.precio}
-                                        onChange={onChangeForm}
+                                        value={formulario.precio}
+                                        onChange={manejarCambioFormulario}
                                         required
                                     />
                                 </div>
+
                                 <div className="form-group flex-1">
                                     <label htmlFor="stock">Stock Actual</label>
                                     <input
@@ -494,8 +612,8 @@ export default function Productos({
                                         type="number"
                                         min="0"
                                         placeholder="0"
-                                        value={form.stock}
-                                        onChange={onChangeForm}
+                                        value={formulario.stock}
+                                        onChange={manejarCambioFormulario}
                                         required
                                     />
                                 </div>
@@ -509,17 +627,18 @@ export default function Productos({
                                         name="stockMinimo"
                                         type="number"
                                         min="0"
-                                        value={form.stockMinimo}
-                                        onChange={onChangeForm}
+                                        value={formulario.stockMinimo}
+                                        onChange={manejarCambioFormulario}
                                     />
                                 </div>
+
                                 <div className="form-group flex-1">
                                     <label htmlFor="estado">Estado</label>
                                     <select
                                         id="estado"
                                         name="estado"
-                                        value={form.estado}
-                                        onChange={onChangeForm}
+                                        value={formulario.estado}
+                                        onChange={manejarCambioFormulario}
                                     >
                                         <option value="Activo">Activo</option>
                                         <option value="Inactivo">Inactivo</option>
@@ -528,11 +647,20 @@ export default function Productos({
                             </div>
 
                             <div className="modal-footer">
-                                <button type="button" className="btn-secondary" onClick={cerrarModal} disabled={guardando}>
+                                <button
+                                    type="button"
+                                    className="btn-secondary"
+                                    onClick={cerrarModal}
+                                    disabled={guardando}
+                                >
                                     Cancelar
                                 </button>
                                 <button type="submit" className="btn-submit" disabled={guardando}>
-                                    {guardando ? "Guardando..." : editando ? "Guardar Cambios" : "Registrar Producto"}
+                                    {guardando
+                                        ? "Guardando..."
+                                        : productoEditando
+                                            ? "Guardar Cambios"
+                                            : "Registrar Producto"}
                                 </button>
                             </div>
                         </form>
