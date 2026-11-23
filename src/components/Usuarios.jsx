@@ -1,16 +1,22 @@
 import { useEffect, useState } from "react";
+import Header from "./Header";
 import "../styles/usuarios.css";
-import logo from "../assets/logo.png";
 
 const API_USUARIOS_URL = "http://localhost:8080/api/usuarios";
 const API_ROLES_URL = "http://localhost:8080/api/roles";
 
-export default function Usuarios({ usuarioActual, onIrDashboard }) {
+export default function Usuarios({
+                                     usuarioActual,
+                                     onIrDashboard,
+                                     onIrInventario,
+                                     onIrVentas,
+                                 }) {
     const [usuarios, setUsuarios] = useState([]);
     const [roles, setRoles] = useState([]);
     const [busqueda, setBusqueda] = useState("");
     const [modalAbierto, setModalAbierto] = useState(false);
 
+    // Estado para diferenciar entre crear (null) o editar (objeto usuario)
     const [usuarioEditando, setUsuarioEditando] = useState(null);
 
     const [nombreCompleto, setNombreCompleto] = useState("");
@@ -253,46 +259,18 @@ export default function Usuarios({ usuarioActual, onIrDashboard }) {
     );
     const nombreVisible = usuarioLogueado?.nombre_completo || usuarioActual || "Administrador";
 
-    const srcLogo = typeof logo === "string" ? logo : String(logo);
     const esModoEdicion = Boolean(usuarioEditando);
 
     return (
         <div className="usuarios-page">
-            <header className="app-header">
-                <div className="header-container">
-                    <div className="logo-area">
-                        <img src={srcLogo} alt="Gestión 360" className="header-logo" />
-                    </div>
-
-                    <nav className="nav-links">
-                        <button
-                            type="button"
-                            className="nav-item"
-                            onClick={() => {
-                                if (typeof onIrDashboard === "function") {
-                                    onIrDashboard();
-                                }
-                            }}
-                        >
-                            Dashboard
-                        </button>
-                        <button type="button" className="nav-item active">
-                            Usuarios
-                        </button>
-                        <button type="button" className="nav-item">
-                            Inventario
-                        </button>
-                        <button type="button" className="nav-item">
-                            Ventas
-                        </button>
-                    </nav>
-
-                    <div className="user-profile">
-                        <span className="user-avatar">👤</span>
-                        <span className="user-name">{nombreVisible}</span>
-                    </div>
-                </div>
-            </header>
+            <Header
+                vistaActiva="usuarios"
+                nombreUsuario={nombreVisible}
+                onIrDashboard={onIrDashboard}
+                onIrUsuarios={() => {}}
+                onIrInventario={onIrInventario}
+                onIrVentas={onIrVentas}
+            />
 
             <main className="container">
                 <div className="page-header">
