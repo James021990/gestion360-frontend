@@ -1,0 +1,117 @@
+.clientes-form-card .form-row {
+    display: flex;
+    gap: 14px;
+    margin-bottom: 14px;
+    flex-wrap: wrap;
+}
+
+.clientes-form-card .form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 180px;
+}
+
+.clientes-form-card .flex-1 {
+    flex: 1;
+}
+
+.clientes-form-card .flex-2 {
+    flex: 2;
+}
+
+.clientes-form-card label {
+    font-size: 13px;
+    font-weight: 600;
+    color: #334155;
+}
+
+.clientes-form-card input[type="text"],
+.clientes-form-card input[type="email"] {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    font-size: 14px;
+    color: #0f172a;
+    background-color: #ffffff;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    box-sizing: border-box;
+}
+
+.clientes-form-card input:focus {
+    outline: none;
+    border-color: #2563eb;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.14);
+}
+
+.nit-badge {
+    display: inline-block;
+    padding: 4px 8px;
+    border-radius: 6px;
+    background-color: #f1f5f9;
+    color: #1e293b;
+    font-size: 12.5px;
+    font-weight: 600;
+    border: 1px solid #e2e8f0;
+}
+
+.contacto-correo {
+    font-size: 13.5px;
+    color: #1e293b;
+}
+
+.contacto-telefono {
+    font-size: 12.5px;
+    color: #64748b;
+    margin-top: 2px;
+}
+
+.acciones-cliente {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    white-space: nowrap;
+}
+
+.btn-editar-cliente {
+    padding: 6px 10px;
+    border-radius: 6px;
+    border: 1px solid #cbd5e1;
+    background-color: #f8fafc;
+    color: #0f172a;
+    font-size: 13px;
+    cursor: pointer;
+    transition: background-color 0.2s ease, border-color 0.2s ease;
+}
+
+.btn-editar-cliente:hover {
+    background-color: #e2e8f0;
+    border-color: #94a3b8;
+}
+
+.btn-eliminar-cliente {
+    padding: 6px 10px;
+    border-radius: 6px;
+    border: 1px solid #fecaca;
+    background-color: #fef2f2;
+    color: #dc2626;
+    font-size: 13px;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+
+.btn-eliminar-cliente:hover {
+    background-color: #fee2e2;
+}
+
+@media (max-width: 768px) {
+    .clientes-form-card .form-row {
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .clientes-form-card .form-group {
+        min-width: 100%;
+    }
+}

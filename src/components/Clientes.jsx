@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import Header from "./Header";
 import "../styles/factura.css";
+import "../styles/clientes.css"
 
 const API_CLIENTES_URL = "http://localhost:8080/api/clientes";
 
