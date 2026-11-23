@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import Header from "./Header";
-import "../styles/factura.css";
-import "../styles/clientes.css"
+import "../styles/clientes.css";
 
 const API_CLIENTES_URL = "http://localhost:8080/api/clientes";
 
@@ -38,6 +37,7 @@ export default function Clientes({
     const cargarClientes = async () => {
         setCargando(true);
         setMensaje("");
+        setEsError(false);
         try {
             const res = await fetch(API_CLIENTES_URL);
             if (!res.ok) {
@@ -54,7 +54,37 @@ export default function Clientes({
     };
 
     useEffect(() => {
-        cargarClientes();
+        let activo = true;
+
+        const inicializarClientes = async () => {
+            try {
+                const res = await fetch(API_CLIENTES_URL);
+                if (!res.ok) {
+                    throw new Error(`Error al consultar clientes (${res.status})`);
+                }
+                const data = await res.json();
+                if (activo) {
+                    setClientes(Array.isArray(data) ? data : []);
+                    setEsError(false);
+                    setMensaje("");
+                }
+            } catch (error) {
+                if (activo) {
+                    setEsError(true);
+                    setMensaje(`No se pudieron cargar los clientes: ${error.message}`);
+                }
+            } finally {
+                if (activo) {
+                    setCargando(false);
+                }
+            }
+        };
+
+        inicializarClientes();
+
+        return () => {
+            activo = false;
+        };
     }, []);
 
     const manejarCambio = (e) => {
@@ -188,7 +218,7 @@ export default function Clientes({
             : usuarioActual?.nombre || usuarioActual?.email || "Usuario";
 
     return (
-        <div className="ventas-page">
+        <div className="clientes-page">
             <Header
                 vistaActiva="ventas"
                 nombreUsuario={nombreUsuarioMostrar}
@@ -197,17 +227,20 @@ export default function Clientes({
                 onIrInventario={onIrInventario}
             />
 
-            <main className="container">
-                <div className="page-header">
+            <main className="clientes-container">
+                <div className="clientes-header">
                     <div>
                         <h1>Gestión de Clientes</h1>
-                        <p className="subtitle">Registro y consulta de clientes para facturación</p>
+                        <p className="clientes-subtitle">
+                            Registro y consulta de clientes para facturación
+                        </p>
                     </div>
-                    <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
+
+                    <div className="clientes-header-actions">
                         {onIrNuevaVenta && (
                             <button
                                 type="button"
-                                className="btn-secondary"
+                                className="btn-cli-secondary"
                                 onClick={onIrNuevaVenta}
                             >
                                 ⚡ Nueva Venta
@@ -216,13 +249,13 @@ export default function Clientes({
                         {onIrHistorialFacturas && (
                             <button
                                 type="button"
-                                className="btn-secondary"
+                                className="btn-cli-secondary"
                                 onClick={onIrHistorialFacturas}
                             >
                                 📄 Historial
                             </button>
                         )}
-                        <div className="invoice-number-badge">
+                        <div className="clientes-total-badge">
                             <span>Total:</span>
                             <strong>{clientes.length}</strong>
                         </div>
@@ -230,178 +263,203 @@ export default function Clientes({
                 </div>
 
                 {mensaje && (
-                    <div className={`feedback-banner ${esError ? "error" : "exito"}`}>
+                    <div className={`clientes-banner ${esError ? "error" : "exito"}`}>
                         {mensaje}
                     </div>
                 )}
 
-                <div className="invoice-grid">
-                    <section className="left-panel">
-                        <div className="card client-card">
-                            <h2 className="card-title">
-                                {clienteEditandoId ? "✏️ Editar Cliente" : "👤 Nuevo Cliente"}
-                            </h2>
+                <div className="clientes-grid">
+                    <section className="clientes-card">
+                        <h2 className="clientes-card-title">
+                            {clienteEditandoId ? "✏️ Editar Cliente" : "👤 Nuevo Cliente"}
+                        </h2>
 
-                            <form onSubmit={guardarCliente}>
-                                <div className="form-row">
-                                    <div className="form-group flex-1">
-                                        <label htmlFor="nit_o_cc">NIT / Cédula</label>
-                                        <input
-                                            id="nit_o_cc"
-                                            name="nit_o_cc"
-                                            type="text"
-                                            placeholder="Ej. 1098234567 o 900123456-1"
-                                            value={formData.nit_o_cc}
-                                            onChange={manejarCambio}
-                                            required
-                                        />
-                                    </div>
-                                    <div className="form-group flex-1">
-                                        <label htmlFor="telefono">Teléfono</label>
-                                        <input
-                                            id="telefono"
-                                            name="telefono"
-                                            type="text"
-                                            placeholder="Ej. 3001234567"
-                                            value={formData.telefono}
-                                            onChange={manejarCambio}
-                                        />
-                                    </div>
+                        <form onSubmit={guardarCliente}>
+                            <div className="clientes-form-row">
+                                <div className="clientes-form-group">
+                                    <label htmlFor="nit_o_cc">NIT / Cédula</label>
+                                    <input
+                                        id="nit_o_cc"
+                                        name="nit_o_cc"
+                                        type="text"
+                                        placeholder="Ej. 1098234567 o 900123456-1"
+                                        value={formData.nit_o_cc}
+                                        onChange={manejarCambio}
+                                        required
+                                    />
                                 </div>
 
-                                <div className="form-row">
-                                    <div className="form-group flex-2">
-                                        <label htmlFor="nombre_o_razon_social">Nombre o Razón Social</label>
-                                        <input
-                                            id="nombre_o_razon_social"
-                                            name="nombre_o_razon_social"
-                                            type="text"
-                                            placeholder="Nombre completo o razón social"
-                                            value={formData.nombre_o_razon_social}
-                                            onChange={manejarCambio}
-                                            required
-                                        />
-                                    </div>
+                                <div className="clientes-form-group">
+                                    <label htmlFor="telefono">Teléfono</label>
+                                    <input
+                                        id="telefono"
+                                        name="telefono"
+                                        type="text"
+                                        placeholder="Ej. 3001234567"
+                                        value={formData.telefono}
+                                        onChange={manejarCambio}
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="clientes-form-row single">
+                                <div className="clientes-form-group">
+                                    <label htmlFor="nombre_o_razon_social">
+                                        Nombre o Razón Social
+                                    </label>
+                                    <input
+                                        id="nombre_o_razon_social"
+                                        name="nombre_o_razon_social"
+                                        type="text"
+                                        placeholder="Nombre completo o razón social"
+                                        value={formData.nombre_o_razon_social}
+                                        onChange={manejarCambio}
+                                        required
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="clientes-form-row">
+                                <div className="clientes-form-group">
+                                    <label htmlFor="correo">Correo Electrónico</label>
+                                    <input
+                                        id="correo"
+                                        name="correo"
+                                        type="email"
+                                        placeholder="cliente@correo.com"
+                                        value={formData.correo}
+                                        onChange={manejarCambio}
+                                    />
                                 </div>
 
-                                <div className="form-row">
-                                    <div className="form-group flex-1">
-                                        <label htmlFor="correo">Correo Electrónico</label>
-                                        <input
-                                            id="correo"
-                                            name="correo"
-                                            type="email"
-                                            placeholder="cliente@correo.com"
-                                            value={formData.correo}
-                                            onChange={manejarCambio}
-                                        />
-                                    </div>
-                                    <div className="form-group flex-1">
-                                        <label htmlFor="direccion">Dirección</label>
-                                        <input
-                                            id="direccion"
-                                            name="direccion"
-                                            type="text"
-                                            placeholder="Dirección o municipio"
-                                            value={formData.direccion}
-                                            onChange={manejarCambio}
-                                        />
-                                    </div>
+                                <div className="clientes-form-group">
+                                    <label htmlFor="direccion">Dirección</label>
+                                    <input
+                                        id="direccion"
+                                        name="direccion"
+                                        type="text"
+                                        placeholder="Dirección o municipio"
+                                        value={formData.direccion}
+                                        onChange={manejarCambio}
+                                    />
                                 </div>
+                            </div>
 
-                                <div className="action-buttons" style={{ marginTop: "16px" }}>
-                                    {clienteEditandoId && (
-                                        <button
-                                            type="button"
-                                            className="btn-secondary"
-                                            onClick={limpiarFormulario}
-                                            disabled={guardando}
-                                        >
-                                            Cancelar
-                                        </button>
-                                    )}
+                            <div className="clientes-form-actions">
+                                {clienteEditandoId && (
                                     <button
-                                        type="submit"
-                                        className="btn-primary"
+                                        type="button"
+                                        className="btn-cli-secondary"
+                                        onClick={limpiarFormulario}
                                         disabled={guardando}
                                     >
-                                        {guardando
-                                            ? "Guardando..."
-                                            : clienteEditandoId
-                                                ? "💾 Actualizar Cliente"
-                                                : "➕ Guardar Cliente"}
+                                        Cancelar
                                     </button>
-                                </div>
-                            </form>
-                        </div>
-                    </section>
-
-                    <section className="right-panel">
-                        <div className="card cart-card">
-                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "10px", marginBottom: "14px", flexWrap: "wrap" }}>
-                                <h2 className="card-title" style={{ margin: 0 }}>📋 Clientes Registrados</h2>
+                                )}
                                 <button
-                                    type="button"
-                                    className="btn-secondary"
-                                    onClick={cargarClientes}
-                                    disabled={cargando}
+                                    type="submit"
+                                    className="btn-cli-primary"
+                                    disabled={guardando}
                                 >
-                                    🔄 Actualizar
+                                    {guardando
+                                        ? "Guardando..."
+                                        : clienteEditandoId
+                                            ? "💾 Actualizar Cliente"
+                                            : "➕ Guardar Cliente"}
                                 </button>
                             </div>
+                        </form>
+                    </section>
 
-                            <div className="search-box" style={{ marginBottom: "14px" }}>
-                                <input
-                                    type="text"
-                                    placeholder="Buscar por NIT/CC, nombre, correo o teléfono..."
-                                    value={busqueda}
-                                    onChange={(e) => setBusqueda(e.target.value)}
-                                />
-                            </div>
+                    <section className="clientes-card">
+                        <div className="clientes-list-header">
+                            <h2 className="clientes-card-title" style={{ margin: 0 }}>
+                                📋 Clientes Registrados
+                            </h2>
+                            <button
+                                type="button"
+                                className="btn-cli-secondary"
+                                onClick={cargarClientes}
+                                disabled={cargando}
+                            >
+                                🔄 Actualizar
+                            </button>
+                        </div>
 
-                            <div className="table-responsive">
-                                <table className="cart-table">
-                                    <thead>
+                        <div className="clientes-search">
+                            <input
+                                type="text"
+                                placeholder="Buscar por NIT/CC, nombre, correo o teléfono..."
+                                value={busqueda}
+                                onChange={(e) => setBusqueda(e.target.value)}
+                            />
+                        </div>
+
+                        <div className="clientes-table-wrap">
+                            <table className="clientes-table">
+                                <thead>
+                                <tr>
+                                    <th>NIT / CC</th>
+                                    <th>Nombre / Razón Social</th>
+                                    <th>Contacto</th>
+                                    <th>Dirección</th>
+                                    <th>Acciones</th>
+                                </tr>
+                                </thead>
+                                <tbody>
+                                {cargando ? (
                                     <tr>
-                                        <th>NIT / CC</th>
-                                        <th>Nombre / Razón Social</th>
-                                        <th>Contacto</th>
-                                        <th>Dirección</th>
-                                        <th>Acciones</th>
+                                        <td
+                                            colSpan="5"
+                                            style={{
+                                                textAlign: "center",
+                                                color: "#64748b",
+                                                padding: "24px",
+                                            }}
+                                        >
+                                            Cargando clientes...
+                                        </td>
                                     </tr>
-                                    </thead>
-                                    <tbody>
-                                    {cargando ? (
-                                        <tr>
-                                            <td colSpan="5" style={{ textAlign: "center", color: "#64748b", padding: "20px" }}>
-                                                Cargando clientes...
-                                            </td>
-                                        </tr>
-                                    ) : clientesFiltrados.length === 0 ? (
-                                        <tr>
-                                            <td colSpan="5" style={{ textAlign: "center", color: "#94a3b8", padding: "20px" }}>
-                                                No hay clientes registrados que coincidan con la búsqueda.
-                                            </td>
-                                        </tr>
-                                    ) : (
-                                        clientesFiltrados.map((cli) => {
-                                            const id = obtenerIdCliente(cli);
-                                            return (
-                                                <tr key={id || obtenerNit(cli)}>
-                                                    <td><strong>{obtenerNit(cli)}</strong></td>
-                                                    <td>
-                                                        <strong>{obtenerNombre(cli)}</strong>
-                                                    </td>
-                                                    <td>
-                                                        <div>{cli?.correo || "—"}</div>
-                                                        <small>{cli?.telefono || "—"}</small>
-                                                    </td>
-                                                    <td>{cli?.direccion || "—"}</td>
-                                                    <td style={{ whiteSpace: "nowrap" }}>
+                                ) : clientesFiltrados.length === 0 ? (
+                                    <tr>
+                                        <td
+                                            colSpan="5"
+                                            style={{
+                                                textAlign: "center",
+                                                color: "#94a3b8",
+                                                padding: "24px",
+                                            }}
+                                        >
+                                            No hay clientes registrados que coincidan con la búsqueda.
+                                        </td>
+                                    </tr>
+                                ) : (
+                                    clientesFiltrados.map((cli) => {
+                                        const id = obtenerIdCliente(cli);
+                                        return (
+                                            <tr key={id || obtenerNit(cli)}>
+                                                <td>
+                                                    <span className="nit-badge">{obtenerNit(cli)}</span>
+                                                </td>
+                                                <td>
+                                                    <div className="cliente-nombre-principal">
+                                                        {obtenerNombre(cli)}
+                                                    </div>
+                                                </td>
+                                                <td>
+                                                    <div className="contacto-correo">
+                                                        {cli?.correo || "—"}
+                                                    </div>
+                                                    <div className="contacto-telefono">
+                                                        {cli?.telefono || "—"}
+                                                    </div>
+                                                </td>
+                                                <td>{cli?.direccion || "—"}</td>
+                                                <td>
+                                                    <div className="acciones-cliente">
                                                         <button
                                                             type="button"
-                                                            className="btn-secondary"
-                                                            style={{ marginRight: "6px" }}
+                                                            className="btn-editar-cliente"
                                                             onClick={() => iniciarEdicion(cli)}
                                                             title="Editar"
                                                         >
@@ -409,20 +467,20 @@ export default function Clientes({
                                                         </button>
                                                         <button
                                                             type="button"
-                                                            className="btn-remove"
+                                                            className="btn-eliminar-cliente"
                                                             onClick={() => eliminarCliente(cli)}
                                                             title="Eliminar"
                                                         >
                                                             🗑️
                                                         </button>
-                                                    </td>
-                                                </tr>
-                                            );
-                                        })
-                                    )}
-                                    </tbody>
-                                </table>
-                            </div>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        );
+                                    })
+                                )}
+                                </tbody>
+                            </table>
                         </div>
                     </section>
                 </div>
