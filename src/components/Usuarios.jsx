@@ -10,7 +10,7 @@ export default function Usuarios({ usuarioActual, onIrDashboard }) {
     const [roles, setRoles] = useState([]);
     const [busqueda, setBusqueda] = useState("");
     const [modalAbierto, setModalAbierto] = useState(false);
-
+    
     const [usuarioEditando, setUsuarioEditando] = useState(null);
 
     const [nombreCompleto, setNombreCompleto] = useState("");
@@ -248,6 +248,11 @@ export default function Usuarios({ usuarioActual, onIrDashboard }) {
         return nombre.includes(texto) || email.includes(texto);
     });
 
+    const usuarioLogueado = usuarios.find(
+        (u) => (u.correo || "").toLowerCase() === String(usuarioActual || "").toLowerCase()
+    );
+    const nombreVisible = usuarioLogueado?.nombre_completo || usuarioActual || "Administrador";
+
     const srcLogo = typeof logo === "string" ? logo : String(logo);
     const esModoEdicion = Boolean(usuarioEditando);
 
@@ -284,7 +289,7 @@ export default function Usuarios({ usuarioActual, onIrDashboard }) {
 
                     <div className="user-profile">
                         <span className="user-avatar">👤</span>
-                        <span className="user-name">{usuarioActual || "Administrador"}</span>
+                        <span className="user-name">{nombreVisible}</span>
                     </div>
                 </div>
             </header>
