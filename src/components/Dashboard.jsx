@@ -8,6 +8,8 @@ export default function Dashboard({
                                       onIrUsuarios,
                                       onIrInventario,
                                       onIrVentas,
+                                      onIrHistorialFacturas,
+                                      onIrClientes,
                                       onCerrarSesion,
                                   }) {
     const [menuAbierto, setMenuAbierto] = useState(null);
@@ -44,6 +46,16 @@ export default function Dashboard({
             e.preventDefault();
             if (typeof onIrVentas === "function") {
                 onIrVentas();
+            }
+        } else if (enlace.vista === "historial-facturas") {
+            e.preventDefault();
+            if (typeof onIrHistorialFacturas === "function") {
+                onIrHistorialFacturas();
+            }
+        } else if (enlace.vista === "clientes") {
+            e.preventDefault();
+            if (typeof onIrClientes === "function") {
+                onIrClientes();
             }
         }
     };
@@ -140,8 +152,8 @@ export default function Dashboard({
             titulo: "Ventas",
             enlaces: [
                 { texto: "Nueva Venta (POS)", href: "#pos", vista: "ventas" },
-                { texto: "Historial Facturas", href: "#facturas" },
-                { texto: "Clientes", href: "#clientes" },
+                { texto: "Historial Facturas", href: "#facturas", vista: "historial-facturas" },
+                { texto: "Clientes", href: "#clientes", vista: "clientes" },
             ],
         },
         {

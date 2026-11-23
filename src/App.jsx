@@ -1,71 +1,79 @@
 import { useState } from "react";
-import Login from "./components/Login";
 import Dashboard from "./components/Dashboard";
-import Usuarios from "./components/Usuarios";
-import Productos from "./components/Productos";
 import Ventas from "./components/Ventas";
+import HistorialFacturas from "./components/HistorialFacturas";
+import Clientes from "./components/Clientes";
 
 export default function App() {
-  const [estaAutenticado, setEstaAutenticado] = useState(false);
-  const [usuarioActivo, setUsuarioActivo] = useState("");
   const [vistaActual, setVistaActual] = useState("dashboard");
+  const [usuarioActual, setUsuarioActual] = useState({
+    id_usuario: 1,
+    nombre: "Yeins Gómez",
+    correo: "yeins@gestion360.com",
+  });
 
-  const manejarLoginExitoso = (correoIngresado) => {
-    setUsuarioActivo(correoIngresado);
-    setVistaActual("dashboard");
-    setEstaAutenticado(true);
+  const irADashboard = () => setVistaActual("dashboard");
+  const irANuevaVenta = () => setVistaActual("ventas");
+  const irAHistorialFacturas = () => setVistaActual("historial-facturas");
+  const irAClientes = () => setVistaActual("clientes");
+
+  const irAUsuarios = () => {
+    console.log("Navegar a Gestión de Usuarios");
   };
 
-  const manejarCerrarSesion = () => {
-    setUsuarioActivo("");
-    setVistaActual("dashboard");
-    setEstaAutenticado(false);
+  const irAInventario = () => {
+    console.log("Navegar a Inventario");
   };
 
-  if (!estaAutenticado) {
-    return <Login onLoginExitoso={manejarLoginExitoso} />;
-  }
-
-  if (vistaActual === "usuarios") {
-    return (
-        <Usuarios
-            usuarioActual={usuarioActivo}
-            onIrDashboard={() => setVistaActual("dashboard")}
-            onIrInventario={() => setVistaActual("inventario")}
-            onIrVentas={() => setVistaActual("ventas")}
-        />
-    );
-  }
-
-  if (vistaActual === "inventario") {
-    return (
-        <Productos
-            usuarioActual={usuarioActivo}
-            onIrDashboard={() => setVistaActual("dashboard")}
-            onIrUsuarios={() => setVistaActual("usuarios")}
-            onIrVentas={() => setVistaActual("ventas")}
-        />
-    );
-  }
-
-  if (vistaActual === "ventas") {
-    return (
-        <Ventas
-            usuarioActual={usuarioActivo}
-            onIrDashboard={() => setVistaActual("dashboard")}
-            onIrUsuarios={() => setVistaActual("usuarios")}
-            onIrInventario={() => setVistaActual("inventario")}
-        />
-    );
-  }
+  const cerrarSesion = () => {
+    setUsuarioActual(null);
+    setVistaActual("dashboard");
+  };
 
   return (
-      <Dashboard
-          usuarioCorreo={usuarioActivo}
-          onIrUsuarios={() => setVistaActual("usuarios")}
-          onIrInventario={() => setVistaActual("inventario")}
-          onIrVentas={() => setVistaActual("ventas")}
-          onCerrarSesion={manejarCerrarSesion}
-      />
+      <>
+        {vistaActual === "dashboard" && (
+            <Dashboard
+                usuarioCorreo={usuarioActual?.correo || ""}
+                onIrUsuarios={irAUsuarios}
+                onIrInventario={irAInventario}
+                onIrVentas={irANuevaVenta}
+                onIrHistorialFacturas={irAHistorialFacturas}
+                onIrClientes={irAClientes}
+                onCerrarSesion={cerrarSesion}
+            />
+        )}
+
+        {vistaActual === "ventas" && (
+            <Ventas
+                usuarioActual={usuarioActual}
+                onIrDashboard={irADashboard}
+                onIrUsuarios={irAUsuarios}
+                onIrInventario={irAInventario}
+                onIrHistorialFacturas={irAHistorialFacturas}
+            />
+        )}
+
+        {vistaActual === "historial-facturas" && (
+            <HistorialFacturas
+                usuarioActual={usuarioActual}
+                onIrDashboard={irADashboard}
+                onIrUsuarios={irAUsuarios}
+                onIrInventario={irAInventario}
+                onIrNuevaVenta={irANuevaVenta}
+            />
+        )}
+
+        {vistaActual === "clientes" && (
+            <Clientes
+                usuarioActual={usuarioActual}
+                onIrDashboard={irADashboard}
+                onIrUsuarios={irAUsuarios}
+                onIrInventario={irAInventario}
+                onIrNuevaVenta={irANuevaVenta}
+                onIrHistorialFacturas={irAHistorialFacturas}
+            />
+        )}
+      </>
   );
 }
