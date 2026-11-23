@@ -2,6 +2,8 @@ import { useState } from "react";
 import Login from "./components/Login";
 import Dashboard from "./components/Dashboard";
 import Usuarios from "./components/Usuarios";
+import Productos from "./components/Productos";
+import Ventas from "./components/Ventas";
 
 export default function App() {
   const [estaAutenticado, setEstaAutenticado] = useState(false);
@@ -29,6 +31,30 @@ export default function App() {
         <Usuarios
             usuarioActual={usuarioActivo}
             onIrDashboard={() => setVistaActual("dashboard")}
+            onIrInventario={() => setVistaActual("inventario")}
+            onIrVentas={() => setVistaActual("ventas")}
+        />
+    );
+  }
+
+  if (vistaActual === "inventario") {
+    return (
+        <Productos
+            usuarioActual={usuarioActivo}
+            onIrDashboard={() => setVistaActual("dashboard")}
+            onIrUsuarios={() => setVistaActual("usuarios")}
+            onIrVentas={() => setVistaActual("ventas")}
+        />
+    );
+  }
+
+  if (vistaActual === "ventas") {
+    return (
+        <Ventas
+            usuarioActual={usuarioActivo}
+            onIrDashboard={() => setVistaActual("dashboard")}
+            onIrUsuarios={() => setVistaActual("usuarios")}
+            onIrInventario={() => setVistaActual("inventario")}
         />
     );
   }
@@ -37,6 +63,7 @@ export default function App() {
       <Dashboard
           usuarioCorreo={usuarioActivo}
           onIrUsuarios={() => setVistaActual("usuarios")}
+          onIrVentas={() => setVistaActual("ventas")}
           onCerrarSesion={manejarCerrarSesion}
       />
   );

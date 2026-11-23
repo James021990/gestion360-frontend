@@ -3,7 +3,12 @@ import Chart from "chart.js/auto";
 import "../styles/dashboard.css";
 import logo from "../assets/logo.png";
 
-export default function Dashboard({ usuarioCorreo, onIrUsuarios, onCerrarSesion }) {
+export default function Dashboard({
+                                      usuarioCorreo,
+                                      onIrUsuarios,
+                                      onIrVentas,
+                                      onCerrarSesion,
+                                  }) {
     const [menuAbierto, setMenuAbierto] = useState(null);
     const [busqueda, setBusqueda] = useState("");
 
@@ -28,6 +33,11 @@ export default function Dashboard({ usuarioCorreo, onIrUsuarios, onCerrarSesion 
             e.preventDefault();
             if (typeof onIrUsuarios === "function") {
                 onIrUsuarios();
+            }
+        } else if (enlace.vista === "ventas") {
+            e.preventDefault();
+            if (typeof onIrVentas === "function") {
+                onIrVentas();
             }
         }
     };
@@ -123,7 +133,7 @@ export default function Dashboard({ usuarioCorreo, onIrUsuarios, onCerrarSesion 
             icono: "💳",
             titulo: "Ventas",
             enlaces: [
-                { texto: "Nueva Venta (POS)", href: "#pos" },
+                { texto: "Nueva Venta (POS)", href: "#pos", vista: "ventas" },
                 { texto: "Historial Facturas", href: "#facturas" },
                 { texto: "Clientes", href: "#clientes" },
             ],
