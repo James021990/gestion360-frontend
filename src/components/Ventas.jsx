@@ -1,9 +1,10 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Header from "./Header";
 import "../styles/factura.css";
 
 const API_FACTURAS_URL = "http://localhost:8080/api/facturas";
 const API_DETALLE_URL = "http://localhost:8080/api/detalle_factura";
+const API_CLIENTES_URL = "http://localhost:8080/api/clientes";
 
 const PRODUCTOS_INICIALES = [
     { id: 1, codigo: "COD-001", nombre: "Licencia Software ERP (1 Año)", precio: 450000, stock: "45" },
@@ -19,7 +20,9 @@ export default function Ventas({
                                    onIrInventario,
                                    onIrHistorialFacturas,
                                }) {
-    const [clienteId, setClienteId] = useState("1");
+    const [clientes, setClientes] = useState([]);
+    const [cargandoClientes, setCargandoClientes] = useState(true);
+    const [clienteId, setClienteId] = useState("");
     const [metodoPago, setMetodoPago] = useState("efectivo");
     const [busqueda, setBusqueda] = useState("");
     const [carrito, setCarrito] = useState([]);
@@ -27,6 +30,51 @@ export default function Ventas({
 
     const [mensaje, setMensaje] = useState("");
     const [esError, setEsError] = useState(false);
+
+    const obtenerIdCliente = (cli) => cli?.id_clientes ?? cli?.idCliente ?? cli?.id;
+    const obtenerNitCliente = (cli) => cli?.nit_o_cc ?? cli?.nitOCc ?? "";
+    const obtenerNombreCliente = (cli) =>
+        cli?.nombre_o_razon_social ?? cli?.nombreORazonSocial ?? "Cliente";
+
+    useEffect(() => {
+        let activo = true;
+
+        const cargarClientes = async () => {
+            try {
+                const res = await fetch(API_CLIENTES_URL);
+                if (!res.ok) {
+                    throw new Error(`Error al cargar clientes (${res.status})`);
+                }
+                const data = await res.json();
+                if (!activo) return;
+
+                const listaClientes = Array.isArray(data) ? data : [];
+                setClientes(listaClientes);
+
+                if (listaClientes.length > 0) {
+                    const primerId = obtenerIdCliente(listaClientes[0]);
+                    if (primerId !== undefined && primerId !== null) {
+                        setClienteId(String(primerId));
+                    }
+                }
+            } catch (error) {
+                if (activo) {
+                    setEsError(true);
+                    setMensaje(`No se pudieron cargar los clientes: ${error.message}`);
+                }
+            } finally {
+                if (activo) {
+                    setCargandoClientes(false);
+                }
+            }
+        };
+
+        cargarClientes();
+
+        return () => {
+            activo = false;
+        };
+    }, []);
 
     const formatearMoneda = (valor) => {
         return new Intl.NumberFormat("es-CO", {
@@ -80,6 +128,12 @@ export default function Ventas({
     const total = subtotal + iva;
 
     const procesarVenta = async () => {
+        if (!clienteId) {
+            setEsError(true);
+            setMensaje("Debes seleccionar un cliente registrado antes de facturar.");
+            return;
+        }
+
         if (carrito.length === 0) {
             setEsError(true);
             setMensaje("Debes agregar al menos un producto para procesar la venta.");
@@ -91,6 +145,7 @@ export default function Ventas({
         setEsError(false);
 
         const numeroGenerado = `FAC-2026-${String(Date.now()).slice(-5)}`;
+        const idClienteNumerico = Number(clienteId);
 
         const facturaPayload = {
             numero_factura: numeroGenerado,
@@ -99,7 +154,7 @@ export default function Ventas({
             total,
             forma_pago: metodoPago,
             estado_factura: "Completada",
-            cliente: { id_cliente: Number(clienteId) },
+            cliente: { id_clientes: idClienteNumerico, id_cliente: idClienteNumerico },
             usuario: { id_usuario: Number(usuarioActual?.id_usuario || usuarioActual?.id || 1) },
         };
 
@@ -224,11 +279,25 @@ export default function Ventas({
                                         name="client"
                                         value={clienteId}
                                         onChange={(e) => setClienteId(e.target.value)}
+                                        disabled={cargandoClientes || clientes.length === 0}
                                         required
                                     >
-                                        <option value="1">Cliente General / Consumidor Final</option>
-                                        <option value="2">Carlos Rodríguez - NIT/CC 1.098.234.567</option>
-                                        <option value="3">Empresa Alfa S.A.S - NIT 900.123.456-1</option>
+                                        {cargandoClientes ? (
+                                            <option value="">Cargando clientes...</option>
+                                        ) : clientes.length === 0 ? (
+                                            <option value="">No hay clientes registrados</option>
+                                        ) : (
+                                            clientes.map((cli) => {
+                                                const id = obtenerIdCliente(cli);
+                                                const nombre = obtenerNombreCliente(cli);
+                                                const nit = obtenerNitCliente(cli);
+                                                return (
+                                                    <option key={id} value={String(id)}>
+                                                        {nit ? `${nombre} - NIT/CC ${nit}` : nombre}
+                                                    </option>
+                                                );
+                                            })
+                                        )}
                                     </select>
                                 </div>
                                 <div className="form-group flex-1">

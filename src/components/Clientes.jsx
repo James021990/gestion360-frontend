@@ -115,14 +115,6 @@ export default function Clientes({
         setMensaje("");
         setEsError(false);
 
-        if (!formData.nit_o_cc.trim() || !formData.nombre_o_razon_social.trim()) {
-            setEsError(true);
-            setMensaje("El NIT/CC y el Nombre o Razón Social son obligatorios.");
-            return;
-        }
-
-        setGuardando(true);
-
         const payload = {
             nit_o_cc: formData.nit_o_cc.trim(),
             nombre_o_razon_social: formData.nombre_o_razon_social.trim(),
@@ -130,6 +122,22 @@ export default function Clientes({
             telefono: formData.telefono.trim(),
             direccion: formData.direccion.trim(),
         };
+
+        if (
+            !payload.nit_o_cc ||
+            !payload.nombre_o_razon_social ||
+            !payload.correo ||
+            !payload.telefono ||
+            !payload.direccion
+        ) {
+            setEsError(true);
+            setMensaje(
+                "Todos los campos son obligatorios: NIT/CC, Nombre o Razón Social, Correo, Teléfono y Dirección."
+            );
+            return;
+        }
+
+        setGuardando(true);
 
         const esEdicion = clienteEditandoId !== null && clienteEditandoId !== undefined;
         const url = esEdicion ? `${API_CLIENTES_URL}/${clienteEditandoId}` : API_CLIENTES_URL;
@@ -298,6 +306,7 @@ export default function Clientes({
                                         placeholder="Ej. 3001234567"
                                         value={formData.telefono}
                                         onChange={manejarCambio}
+                                        required
                                     />
                                 </div>
                             </div>
@@ -329,6 +338,7 @@ export default function Clientes({
                                         placeholder="cliente@correo.com"
                                         value={formData.correo}
                                         onChange={manejarCambio}
+                                        required
                                     />
                                 </div>
 
@@ -341,6 +351,7 @@ export default function Clientes({
                                         placeholder="Dirección o municipio"
                                         value={formData.direccion}
                                         onChange={manejarCambio}
+                                        required
                                     />
                                 </div>
                             </div>
