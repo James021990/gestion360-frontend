@@ -45,7 +45,39 @@ export default function Usuarios({ usuarioActual, onIrDashboard }) {
     };
 
     useEffect(() => {
-        cargarDatos();
+        let montado = true;
+
+        const inicializar = async () => {
+            try {
+                const [resUsuarios, resRoles] = await Promise.all([
+                    fetch(API_USUARIOS_URL),
+                    fetch(API_ROLES_URL),
+                ]);
+
+                if (!montado) return;
+
+                if (resUsuarios.ok) {
+                    const dataUsuarios = await resUsuarios.json();
+                    setUsuarios(Array.isArray(dataUsuarios) ? dataUsuarios : []);
+                }
+
+                if (resRoles.ok) {
+                    const dataRoles = await resRoles.json();
+                    setRoles(Array.isArray(dataRoles) ? dataRoles : []);
+                }
+            } catch {
+                if (montado) {
+                    setEsError(true);
+                    setMensaje("No se pudieron cargar los usuarios o roles desde el backend.");
+                }
+            }
+        };
+
+        void inicializar();
+
+        return () => {
+            montado = false;
+        };
     }, []);
 
     const abrirModal = () => {
@@ -116,12 +148,14 @@ export default function Usuarios({ usuarioActual, onIrDashboard }) {
         return nombre.includes(texto) || email.includes(texto);
     });
 
+    const srcLogo = typeof logo === "string" ? logo : String(logo);
+
     return (
         <div className="usuarios-page">
             <header className="app-header">
                 <div className="header-container">
                     <div className="logo-area">
-                        <img src={logo} alt="Gestión 360" className="header-logo" />
+                        <img src={srcLogo} alt="Gestión 360" className="header-logo" />
                     </div>
 
                     <nav className="nav-links">
