@@ -6,6 +6,7 @@ import logo from "../assets/logo.png";
 export default function Dashboard({
                                       usuarioCorreo,
                                       onIrUsuarios,
+                                      onIrInventario,
                                       onIrVentas,
                                       onCerrarSesion,
                                   }) {
@@ -33,6 +34,11 @@ export default function Dashboard({
             e.preventDefault();
             if (typeof onIrUsuarios === "function") {
                 onIrUsuarios();
+            }
+        } else if (enlace.vista === "inventario") {
+            e.preventDefault();
+            if (typeof onIrInventario === "function") {
+                onIrInventario();
             }
         } else if (enlace.vista === "ventas") {
             e.preventDefault();
@@ -122,7 +128,7 @@ export default function Dashboard({
             icono: "📦",
             titulo: "Inventario",
             enlaces: [
-                { texto: "Catálogo Productos", href: "#catalogo" },
+                { texto: "Catálogo Productos", href: "#catalogo", vista: "inventario" },
                 { texto: "Entradas / Salidas", href: "#movimientos" },
                 { texto: "Alertas de Stock", href: "#alertas" },
                 { texto: "Categorías", href: "#categorias" },

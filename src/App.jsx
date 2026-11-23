@@ -63,6 +63,7 @@ export default function App() {
       <Dashboard
           usuarioCorreo={usuarioActivo}
           onIrUsuarios={() => setVistaActual("usuarios")}
+          onIrInventario={() => setVistaActual("inventario")}
           onIrVentas={() => setVistaActual("ventas")}
           onCerrarSesion={manejarCerrarSesion}
       />
