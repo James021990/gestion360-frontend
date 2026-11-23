@@ -11,54 +11,66 @@
     color: #1e293b;
 }
 
-.container {
+.productos-page .container {
     max-width: 1200px;
     margin: 30px auto;
     padding: 0 20px;
 }
 
-.page-header {
+.productos-page .page-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 24px;
     gap: 16px;
+    margin-bottom: 24px;
 }
 
-.page-header h1 {
+.productos-page .page-header h1 {
     font-size: 24px;
     color: #0f172a;
 }
 
-.subtitle {
+.productos-page .subtitle {
     color: #64748b;
     font-size: 14px;
     margin-top: 4px;
 }
 
-.action-buttons {
-    display: flex;
-    gap: 10px;
+.productos-page .page-header #btnRegistrarProducto,
+.productos-page .page-header .btn-nuevo-producto {
+    display: inline-flex;
     align-items: center;
-}
-
-.btn-primary {
-    background-color: #2563eb;
-    color: white;
-    border: none;
-    padding: 10px 18px;
-    border-radius: 8px;
+    justify-content: center;
+    width: auto;
+    min-width: unset;
+    max-width: fit-content;
+    flex: 0 0 auto;
+    padding: 9px 16px;
+    font-size: 13.5px;
     font-weight: 600;
-    font-size: 14px;
+    line-height: 1.2;
+    color: #ffffff;
+    background-color: #2563eb;
+    border: 1px solid #2563eb;
+    border-radius: 8px;
     cursor: pointer;
-    transition: background 0.2s;
+    white-space: nowrap;
+    box-shadow: 0 2px 6px rgba(37, 99, 235, 0.25);
+    transition: background-color 0.2s ease, transform 0.15s ease;
 }
 
-.btn-primary:hover {
+.productos-page .page-header #btnRegistrarProducto:hover,
+.productos-page .page-header .btn-nuevo-producto:hover {
     background-color: #1d4ed8;
+    border-color: #1d4ed8;
 }
 
-.btn-secondary {
+.productos-page .page-header #btnRegistrarProducto:active,
+.productos-page .page-header .btn-nuevo-producto:active {
+    transform: translateY(1px);
+}
+
+.productos-page .btn-secondary {
     background-color: #e2e8f0;
     color: #334155;
     border: none;
@@ -67,15 +79,14 @@
     font-weight: 600;
     font-size: 14px;
     cursor: pointer;
-    transition: background 0.2s;
+    transition: background-color 0.2s ease;
 }
 
-.btn-secondary:hover {
+.productos-page .btn-secondary:hover {
     background-color: #cbd5e1;
 }
 
-/* Banner de retroalimentación */
-.feedback-banner {
+.productos-page .feedback-banner {
     padding: 12px 16px;
     border-radius: 8px;
     margin-bottom: 18px;
@@ -83,50 +94,52 @@
     font-weight: 500;
 }
 
-.feedback-banner.exito {
+.productos-page .feedback-banner.exito {
     background-color: #dcfce7;
     color: #166534;
     border: 1px solid #86efac;
 }
 
-.feedback-banner.error {
+.productos-page .feedback-banner.error {
     background-color: #fee2e2;
     color: #991b1b;
     border: 1px solid #fca5a5;
 }
 
-.card {
-    background: white;
+.productos-page .card {
+    background: #ffffff;
     border-radius: 12px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+    box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
     padding: 20px;
     overflow-x: auto;
 }
 
-.table-toolbar {
+.productos-page .table-toolbar {
     display: flex;
     gap: 14px;
     align-items: center;
     margin-bottom: 16px;
 }
 
-.table-toolbar input {
+.productos-page .table-toolbar input {
     flex: 2;
     width: 100%;
     padding: 10px 14px;
     border: 1px solid #cbd5e1;
     border-radius: 8px;
     font-size: 14px;
+    color: #0f172a;
+    background-color: #ffffff;
     outline: none;
-    transition: border-color 0.2s, box-shadow 0.2s;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
-.table-toolbar input:focus {
+.productos-page .table-toolbar input:focus {
     border-color: #2563eb;
     box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
 }
 
-.toolbar-select {
+.productos-page .toolbar-select {
     flex: 1;
     padding: 10px 14px;
     border: 1px solid #cbd5e1;
@@ -137,21 +150,21 @@
     background-color: #f8fafc;
     outline: none;
     cursor: pointer;
-    transition: border-color 0.2s, box-shadow 0.2s;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
-.toolbar-select:focus {
+.productos-page .toolbar-select:focus {
     border-color: #2563eb;
     box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
 }
 
-.data-table {
+.productos-page .data-table {
     width: 100%;
     border-collapse: collapse;
     text-align: left;
 }
 
-.data-table th {
+.productos-page .data-table th {
     padding: 12px 14px;
     font-size: 12px;
     text-transform: uppercase;
@@ -160,18 +173,18 @@
     letter-spacing: 0.4px;
 }
 
-.data-table td {
+.productos-page .data-table td {
     padding: 14px;
     border-bottom: 1px solid #f1f5f9;
     font-size: 14px;
     vertical-align: middle;
 }
 
-.data-table tbody tr:hover {
+.productos-page .data-table tbody tr:hover {
     background-color: #f8fafc;
 }
 
-.badge {
+.productos-page .badge {
     padding: 4px 10px;
     border-radius: 20px;
     font-size: 12px;
@@ -179,36 +192,31 @@
     display: inline-block;
 }
 
-.badge-admin {
-    background-color: #dbeafe;
-    color: #1d4ed8;
-}
-
-.badge-user {
+.productos-page .badge-user {
     background-color: #f1f5f9;
     color: #475569;
 }
 
-.status-active {
+.productos-page .status-active {
     color: #16a34a;
     font-weight: 600;
     font-size: 13px;
 }
 
-.status-inactive {
+.productos-page .status-inactive {
     color: #dc2626;
     font-weight: 600;
     font-size: 13px;
 }
 
-.action-links {
+.productos-page .action-links {
     display: flex;
     gap: 8px;
     align-items: center;
 }
 
-.btn-edit {
-    background: #eff6ff;
+.productos-page .btn-edit {
+    background-color: #eff6ff;
     color: #2563eb;
     border: none;
     padding: 6px 12px;
@@ -216,15 +224,15 @@
     font-weight: 600;
     font-size: 13px;
     cursor: pointer;
-    transition: background 0.2s;
+    transition: background-color 0.2s ease;
 }
 
-.btn-edit:hover {
-    background: #dbeafe;
+.productos-page .btn-edit:hover {
+    background-color: #dbeafe;
 }
 
-.btn-delete {
-    background: #fef2f2;
+.productos-page .btn-delete {
+    background-color: #fef2f2;
     color: #dc2626;
     border: none;
     padding: 6px 12px;
@@ -232,17 +240,17 @@
     font-weight: 600;
     font-size: 13px;
     cursor: pointer;
-    transition: background 0.2s;
+    transition: background-color 0.2s ease;
 }
 
-.btn-delete:hover {
-    background: #fee2e2;
+.productos-page .btn-delete:hover {
+    background-color: #fee2e2;
 }
 
-.modal-overlay {
+.productos-page .modal-overlay {
     position: fixed;
     inset: 0;
-    background: rgba(15, 23, 42, 0.55);
+    background-color: rgba(15, 23, 42, 0.55);
     display: flex;
     justify-content: center;
     align-items: center;
@@ -250,8 +258,8 @@
     z-index: 1000;
 }
 
-.modal-card {
-    background: #ffffff;
+.productos-page .modal-card {
+    background-color: #ffffff;
     width: 100%;
     max-width: 500px;
     border-radius: 12px;
@@ -271,7 +279,7 @@
     }
 }
 
-.modal-header {
+.productos-page .modal-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -279,12 +287,12 @@
     border-bottom: 1px solid #e2e8f0;
 }
 
-.modal-header h2 {
+.productos-page .modal-header h2 {
     font-size: 18px;
     color: #0f172a;
 }
 
-.btn-close {
+.productos-page .btn-close {
     background: transparent;
     border: none;
     font-size: 24px;
@@ -295,56 +303,56 @@
     border-radius: 6px;
 }
 
-.btn-close:hover {
-    background: #f1f5f9;
+.productos-page .btn-close:hover {
+    background-color: #f1f5f9;
     color: #0f172a;
 }
 
-.modal-body {
+.productos-page .modal-body {
     padding: 20px;
 }
 
-.form-group {
+.productos-page .form-group {
     display: flex;
     flex-direction: column;
     gap: 6px;
     margin-bottom: 14px;
 }
 
-.form-group label {
+.productos-page .form-group label {
     font-size: 13px;
     font-weight: 600;
     color: #334155;
 }
 
-.form-group input,
-.form-group select {
+.productos-page .form-group input,
+.productos-page .form-group select {
     padding: 10px 12px;
     border: 1px solid #cbd5e1;
     border-radius: 8px;
     font-size: 14px;
     color: #0f172a;
-    background: #ffffff;
+    background-color: #ffffff;
     outline: none;
-    transition: border-color 0.2s, box-shadow 0.2s;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
-.form-group input:focus,
-.form-group select:focus {
+.productos-page .form-group input:focus,
+.productos-page .form-group select:focus {
     border-color: #2563eb;
     box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
 }
 
-.form-row {
+.productos-page .form-row {
     display: flex;
     gap: 12px;
 }
 
-.flex-1 {
+.productos-page .flex-1 {
     flex: 1;
 }
 
-.modal-footer {
+.productos-page .modal-footer {
     display: flex;
     justify-content: flex-end;
     gap: 10px;
@@ -352,7 +360,7 @@
     border-top: 1px solid #f1f5f9;
 }
 
-.btn-submit {
+.productos-page .btn-submit {
     background-color: #2563eb;
     color: #ffffff;
     border: none;
@@ -361,22 +369,23 @@
     font-weight: 600;
     font-size: 14px;
     cursor: pointer;
-    transition: background 0.2s;
+    transition: background-color 0.2s ease;
 }
 
-.btn-submit:hover {
+.productos-page .btn-submit:hover {
     background-color: #1d4ed8;
 }
 
 @media (max-width: 640px) {
-    .page-header,
-    .table-toolbar,
-    .form-row {
+    .productos-page .page-header,
+    .productos-page .table-toolbar,
+    .productos-page .form-row {
         flex-direction: column;
         align-items: stretch;
     }
 
-    .action-buttons {
-        justify-content: flex-end;
+    .productos-page .page-header #btnRegistrarProducto,
+    .productos-page .page-header .btn-nuevo-producto {
+        align-self: flex-end;
     }
 }

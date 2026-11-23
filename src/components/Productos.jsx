@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import Header from "./Header";
-import "../styles/usuarios.css";
+import "../styles/productos.css";
 
 const PRODUCTOS_INICIALES = [
     {
@@ -11,7 +11,7 @@ const PRODUCTOS_INICIALES = [
         precio: 450000,
         stock: 45,
         stockMinimo: 10,
-        estado: "ACTIVO",
+        estado: "Activo",
     },
     {
         id: 2,
@@ -20,8 +20,8 @@ const PRODUCTOS_INICIALES = [
         categoria: "Servicios",
         precio: 120000,
         stock: 99,
-        stockMinimo: 5,
-        estado: "ACTIVO",
+        stockMinimo: 15,
+        estado: "Activo",
     },
     {
         id: 3,
@@ -31,7 +31,7 @@ const PRODUCTOS_INICIALES = [
         precio: 180000,
         stock: 12,
         stockMinimo: 15,
-        estado: "ACTIVO",
+        estado: "Activo",
     },
     {
         id: 4,
@@ -41,7 +41,7 @@ const PRODUCTOS_INICIALES = [
         precio: 85000,
         stock: 30,
         stockMinimo: 10,
-        estado: "ACTIVO",
+        estado: "Activo",
     },
     {
         id: 5,
@@ -51,9 +51,27 @@ const PRODUCTOS_INICIALES = [
         precio: 22000,
         stock: 4,
         stockMinimo: 10,
-        estado: "INACTIVO",
+        estado: "Inactivo",
     },
 ];
+
+const FORMULARIO_VACIO = {
+    codigo: "",
+    nombre: "",
+    categoria: "Software",
+    precio: "",
+    stock: "",
+    stockMinimo: "10",
+    estado: "Activo",
+};
+
+const formatearMoneda = (valor) => {
+    return new Intl.NumberFormat("es-CO", {
+        style: "currency",
+        currency: "COP",
+        maximumFractionDigits: 0,
+    }).format(Number(valor) || 0);
+};
 
 export default function Productos({
                                       usuarioActual,
@@ -63,67 +81,98 @@ export default function Productos({
                                   }) {
     const [productos, setProductos] = useState(PRODUCTOS_INICIALES);
     const [busqueda, setBusqueda] = useState("");
-    const [filtroCategoria, setFiltroCategoria] = useState("TODAS");
+    const [categoriaFiltro, setCategoriaFiltro] = useState("Todas");
     const [modalAbierto, setModalAbierto] = useState(false);
     const [productoEditando, setProductoEditando] = useState(null);
+    const [formulario, setFormulario] = useState(FORMULARIO_VACIO);
+    const [mensaje, setMensaje] = useState(null);
 
-    const [codigo, setCodigo] = useState("");
-    const [nombre, setNombre] = useState("");
-    const [categoria, setCategoria] = useState("Hardware");
-    const [precio, setPrecio] = useState("");
-    const [stock, setStock] = useState("");
-    const [stockMinimo, setStockMinimo] = useState("5");
+    const categoriasDisponibles = useMemo(() => {
+        const base = ["Software", "Servicios", "Hardware", "Papelería"];
+        const extras = productos
+            .map((p) => p.categoria)
+            .filter((cat) => cat && !base.includes(cat));
+        return ["Todas", ...base, ...new Set(extras)];
+    }, [productos]);
 
-    const [mensaje, setMensaje] = useState("");
-    const [esError, setEsError] = useState(false);
+    const productosFiltrados = useMemo(() => {
+        return productos.filter((prod) => {
+            const coincideCategoria =
+                categoriaFiltro === "Todas" || prod.categoria === categoriaFiltro;
 
-    const formatearMoneda = (valor) => {
-        return new Intl.NumberFormat("es-CO", {
-            style: "currency",
-            currency: "COP",
-            minimumFractionDigits: 0,
-        }).format(Number(valor) || 0);
+            const texto = busqueda.trim().toLowerCase();
+            const coincideTexto =
+                !texto ||
+                prod.codigo.toLowerCase().includes(texto) ||
+                prod.nombre.toLowerCase().includes(texto) ||
+                prod.categoria.toLowerCase().includes(texto);
+
+            return coincideCategoria && coincideTexto;
+        });
+    }, [productos, busqueda, categoriaFiltro]);
+
+    const mostrarAlerta = (tipo, texto) => {
+        setMensaje({ tipo, texto });
+        setTimeout(() => {
+            setMensaje(null);
+        }, 3500);
     };
 
     const abrirModalCrear = () => {
         setProductoEditando(null);
-        setCodigo("");
-        setNombre("");
-        setCategoria("Hardware");
-        setPrecio("");
-        setStock("");
-        setStockMinimo("5");
+        setFormulario(FORMULARIO_VACIO);
         setModalAbierto(true);
     };
 
-    const abrirModalEditar = (prod) => {
-        setProductoEditando(prod);
-        setCodigo(prod.codigo || "");
-        setNombre(prod.nombre || "");
-        setCategoria(prod.categoria || "Hardware");
-        setPrecio(String(prod.precio ?? ""));
-        setStock(String(prod.stock ?? ""));
-        setStockMinimo(String(prod.stockMinimo ?? "5"));
+    const abrirModalEditar = (producto) => {
+        setProductoEditando(producto);
+        setFormulario({
+            codigo: producto.codigo,
+            nombre: producto.nombre,
+            categoria: producto.categoria,
+            precio: String(producto.precio),
+            stock: String(producto.stock),
+            stockMinimo: String(producto.stockMinimo ?? 10),
+            estado: producto.estado,
+        });
         setModalAbierto(true);
     };
 
     const cerrarModal = () => {
         setModalAbierto(false);
         setProductoEditando(null);
+        setFormulario(FORMULARIO_VACIO);
+    };
+
+    const manejarCambioFormulario = (e) => {
+        const { name, value } = e.target;
+        setFormulario((prev) => ({
+            ...prev,
+            [name]: value,
+        }));
     };
 
     const manejarGuardarProducto = (e) => {
         e.preventDefault();
-        setEsError(false);
-        setMensaje("");
 
-        const precioNum = Number(precio);
-        const stockNum = Number(stock);
-        const minimoNum = Number(stockMinimo);
+        const codigoLimpio = formulario.codigo.trim().toUpperCase();
+        const nombreLimpio = formulario.nombre.trim();
+        const precioNumero = Number(formulario.precio);
+        const stockNumero = Number(formulario.stock);
+        const stockMinimoNumero = Number(formulario.stockMinimo) || 0;
 
-        if (!codigo.trim() || !nombre.trim() || precioNum <= 0 || stockNum < 0) {
-            setEsError(true);
-            setMensaje("Verifica el código, nombre, precio mayor a 0 y stock válido.");
+        if (!codigoLimpio || !nombreLimpio) {
+            mostrarAlerta("error", "Completa el código y el nombre del producto.");
+            return;
+        }
+
+        if (Number.isNaN(precioNumero) || precioNumero < 0) {
+            mostrarAlerta("error", "Ingresa un precio unitario válido.");
+            return;
+        }
+
+        if (Number.isNaN(stockNumero) || stockNumero < 0) {
+            mostrarAlerta("error", "Ingresa una cantidad de stock válida.");
             return;
         }
 
@@ -133,77 +182,53 @@ export default function Productos({
                     item.id === productoEditando.id
                         ? {
                             ...item,
-                            codigo: codigo.trim().toUpperCase(),
-                            nombre: nombre.trim(),
-                            categoria,
-                            precio: precioNum,
-                            stock: stockNum,
-                            stockMinimo: minimoNum >= 0 ? minimoNum : 0,
+                            codigo: codigoLimpio,
+                            nombre: nombreLimpio,
+                            categoria: formulario.categoria,
+                            precio: precioNumero,
+                            stock: stockNumero,
+                            stockMinimo: stockMinimoNumero,
+                            estado: formulario.estado,
                         }
                         : item
                 )
             );
-            setMensaje("Producto actualizado exitosamente.");
+            mostrarAlerta("exito", `Producto "${nombreLimpio}" actualizado correctamente.`);
         } else {
             const nuevoProducto = {
                 id: Date.now(),
-                codigo: codigo.trim().toUpperCase(),
-                nombre: nombre.trim(),
-                categoria,
-                precio: precioNum,
-                stock: stockNum,
-                stockMinimo: minimoNum >= 0 ? minimoNum : 0,
-                estado: "ACTIVO",
+                codigo: codigoLimpio,
+                nombre: nombreLimpio,
+                categoria: formulario.categoria,
+                precio: precioNumero,
+                stock: stockNumero,
+                stockMinimo: stockMinimoNumero,
+                estado: formulario.estado,
             };
             setProductos((prev) => [nuevoProducto, ...prev]);
-            setMensaje("Producto registrado exitosamente.");
+            mostrarAlerta("exito", `Producto "${nombreLimpio}" registrado en inventario.`);
         }
 
-        setModalAbierto(false);
-        setProductoEditando(null);
+        cerrarModal();
     };
 
-    const manejarCambiarEstado = (prod) => {
-        const estaActivo = (prod.estado || "").toUpperCase() === "ACTIVO";
-        const nuevoEstado = estaActivo ? "INACTIVO" : "ACTIVO";
-        const accion = estaActivo ? "desactivar" : "activar";
-
-        if (!window.confirm(`¿Seguro que deseas ${accion} el producto "${prod.nombre}"?`)) {
-            return;
-        }
-
+    const alternarEstadoProducto = (id) => {
         setProductos((prev) =>
-            prev.map((item) =>
-                item.id === prod.id ? { ...item, estado: nuevoEstado } : item
-            )
+            prev.map((item) => {
+                if (item.id !== id) return item;
+                const nuevoEstado = item.estado === "Activo" ? "Inactivo" : "Activo";
+                return { ...item, estado: nuevoEstado };
+            })
         );
-        setEsError(false);
-        setMensaje(`Producto ${estaActivo ? "desactivado" : "activado"} exitosamente.`);
     };
-
-    const productosFiltrados = productos.filter((prod) => {
-        const texto = busqueda.toLowerCase();
-        const coincideTexto =
-            (prod.nombre || "").toLowerCase().includes(texto) ||
-            (prod.codigo || "").toLowerCase().includes(texto) ||
-            (prod.categoria || "").toLowerCase().includes(texto);
-
-        const coincideCategoria =
-            filtroCategoria === "TODAS" || prod.categoria === filtroCategoria;
-
-        return coincideTexto && coincideCategoria;
-    });
-
-    const esModoEdicion = Boolean(productoEditando);
 
     return (
-        <div className="usuarios-page">
+        <div className="productos-page">
             <Header
                 vistaActiva="inventario"
-                nombreUsuario={usuarioActual || "Administrador"}
+                usuarioActual={usuarioActual}
                 onIrDashboard={onIrDashboard}
                 onIrUsuarios={onIrUsuarios}
-                onIrInventario={() => {}}
                 onIrVentas={onIrVentas}
             />
 
@@ -215,9 +240,11 @@ export default function Productos({
                             Administra el catálogo de productos y servicios, precios, stock y alertas
                         </p>
                     </div>
+
                     <button
+                        id="btnRegistrarProducto"
                         type="button"
-                        className="btn-primary"
+                        className="btn-nuevo-producto"
                         onClick={abrirModalCrear}
                     >
                         + Registrar Producto
@@ -225,44 +252,30 @@ export default function Productos({
                 </div>
 
                 {mensaje && (
-                    <div className={`feedback-banner ${esError ? "error" : "exito"}`}>
-                        {mensaje}
+                    <div className={`feedback-banner ${mensaje.tipo}`}>
+                        {mensaje.texto}
                     </div>
                 )}
 
                 <section className="card">
-                    <div
-                        className="table-toolbar"
-                        style={{ display: "flex", gap: "14px", alignItems: "center" }}
-                    >
+                    <div className="table-toolbar">
                         <input
                             type="text"
-                            placeholder="🔍 Buscar por código, nombre o categoría..."
+                            placeholder="Buscar por código, nombre o categoría..."
                             value={busqueda}
                             onChange={(e) => setBusqueda(e.target.value)}
-                            style={{ flex: 2 }}
                         />
 
                         <select
-                            aria-label="Filtrar por categoría"
-                            value={filtroCategoria}
-                            onChange={(e) => setFiltroCategoria(e.target.value)}
-                            style={{
-                                flex: 1,
-                                padding: "11px 14px",
-                                border: "1.5px solid #cbd5e1",
-                                borderRadius: "10px",
-                                fontSize: "14px",
-                                backgroundColor: "#f8fafc",
-                                color: "#334155",
-                                fontWeight: 600,
-                            }}
+                            className="toolbar-select"
+                            value={categoriaFiltro}
+                            onChange={(e) => setCategoriaFiltro(e.target.value)}
                         >
-                            <option value="TODAS">Todas las categorías</option>
-                            <option value="Software">Software</option>
-                            <option value="Servicios">Servicios</option>
-                            <option value="Hardware">Hardware</option>
-                            <option value="Papelería">Papelería</option>
+                            {categoriasDisponibles.map((cat) => (
+                                <option key={cat} value={cat}>
+                                    {cat === "Todas" ? "Todas las categorías" : cat}
+                                </option>
+                            ))}
                         </select>
                     </div>
 
@@ -281,64 +294,54 @@ export default function Productos({
                         <tbody>
                         {productosFiltrados.length === 0 ? (
                             <tr>
-                                <td colSpan="7">
-                                    No hay productos registrados o que coincidan con el filtro.
+                                <td colSpan="7" style={{ textAlign: "center", padding: "24px", color: "#64748b" }}>
+                                    No se encontraron productos que coincidan con el filtro.
                                 </td>
                             </tr>
                         ) : (
                             productosFiltrados.map((prod) => {
-                                const activo = (prod.estado || "").toUpperCase() === "ACTIVO";
-                                const stockBajo = Number(prod.stock) <= Number(prod.stockMinimo);
-
+                                const stockBajo = prod.stock <= (prod.stockMinimo ?? 10);
                                 return (
                                     <tr key={prod.id}>
                                         <td>
                                             <strong>{prod.codigo}</strong>
                                         </td>
+                                        <td>{prod.nombre}</td>
                                         <td>
-                                            <strong>{prod.nombre}</strong>
+                                            <span className="badge badge-user">{prod.categoria}</span>
+                                        </td>
+                                        <td>{formatearMoneda(prod.precio)}</td>
+                                        <td>
+                        <span className={stockBajo ? "status-inactive" : "status-active"}>
+                          {stockBajo ? `▲ ${prod.stock} (Bajo)` : `${prod.stock} und.`}
+                        </span>
                                         </td>
                                         <td>
-                                                <span className="badge badge-user">
-                                                    {prod.categoria}
-                                                </span>
+                        <span
+                            className={
+                                prod.estado === "Activo" ? "status-active" : "status-inactive"
+                            }
+                        >
+                          • {prod.estado}
+                        </span>
                                         </td>
                                         <td>
-                                            <strong>{formatearMoneda(prod.precio)}</strong>
-                                        </td>
-                                        <td>
-                                                <span
-                                                    className={
-                                                        stockBajo ? "status-inactive" : "status-active"
-                                                    }
+                                            <div className="action-links">
+                                                <button
+                                                    type="button"
+                                                    className="btn-edit"
+                                                    onClick={() => abrirModalEditar(prod)}
                                                 >
-                                                    {stockBajo ? `⚠️ ${prod.stock} (Bajo)` : `${prod.stock} und.`}
-                                                </span>
-                                        </td>
-                                        <td>
-                                                <span
-                                                    className={
-                                                        activo ? "status-active" : "status-inactive"
-                                                    }
+                                                    Editar
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    className="btn-delete"
+                                                    onClick={() => alternarEstadoProducto(prod.id)}
                                                 >
-                                                    ● {activo ? "Activo" : "Inactivo"}
-                                                </span>
-                                        </td>
-                                        <td className="action-links">
-                                            <button
-                                                type="button"
-                                                className="btn-edit"
-                                                onClick={() => abrirModalEditar(prod)}
-                                            >
-                                                Editar
-                                            </button>
-                                            <button
-                                                type="button"
-                                                className="btn-delete"
-                                                onClick={() => manejarCambiarEstado(prod)}
-                                            >
-                                                {activo ? "Desactivar" : "Activar"}
-                                            </button>
+                                                    {prod.estado === "Activo" ? "Desactivar" : "Activar"}
+                                                </button>
+                                            </div>
                                         </td>
                                     </tr>
                                 );
@@ -350,18 +353,11 @@ export default function Productos({
             </main>
 
             {modalAbierto && (
-                <div
-                    className="modal-overlay"
-                    onClick={(e) => {
-                        if (e.target.classList.contains("modal-overlay")) {
-                            cerrarModal();
-                        }
-                    }}
-                >
-                    <div className="modal-card">
-                        <header className="modal-header">
+                <div className="modal-overlay" onClick={cerrarModal}>
+                    <div className="modal-card" onClick={(e) => e.stopPropagation()}>
+                        <div className="modal-header">
                             <h2>
-                                {esModoEdicion ? "Editar Producto" : "Registrar Nuevo Producto"}
+                                {productoEditando ? "Editar Producto" : "Registrar Nuevo Producto"}
                             </h2>
                             <button
                                 type="button"
@@ -369,20 +365,21 @@ export default function Productos({
                                 onClick={cerrarModal}
                                 aria-label="Cerrar modal"
                             >
-                                &times;
+                                ×
                             </button>
-                        </header>
+                        </div>
 
-                        <form onSubmit={manejarGuardarProducto} className="modal-body">
+                        <form className="modal-body" onSubmit={manejarGuardarProducto}>
                             <div className="form-row">
                                 <div className="form-group flex-1">
                                     <label htmlFor="codigo">Código</label>
                                     <input
-                                        type="text"
                                         id="codigo"
-                                        placeholder="Ej: COD-110"
-                                        value={codigo}
-                                        onChange={(e) => setCodigo(e.target.value)}
+                                        name="codigo"
+                                        type="text"
+                                        placeholder="Ej. COD-301"
+                                        value={formulario.codigo}
+                                        onChange={manejarCambioFormulario}
                                         required
                                     />
                                 </div>
@@ -391,39 +388,43 @@ export default function Productos({
                                     <label htmlFor="categoria">Categoría</label>
                                     <select
                                         id="categoria"
-                                        value={categoria}
-                                        onChange={(e) => setCategoria(e.target.value)}
+                                        name="categoria"
+                                        value={formulario.categoria}
+                                        onChange={manejarCambioFormulario}
                                     >
-                                        <option value="Hardware">Hardware</option>
                                         <option value="Software">Software</option>
                                         <option value="Servicios">Servicios</option>
+                                        <option value="Hardware">Hardware</option>
                                         <option value="Papelería">Papelería</option>
                                     </select>
                                 </div>
                             </div>
 
                             <div className="form-group">
-                                <label htmlFor="nombre">Nombre del Producto o Servicio</label>
+                                <label htmlFor="nombre">Producto / Servicio</label>
                                 <input
-                                    type="text"
                                     id="nombre"
-                                    placeholder="Ej: Monitor LED 24 Pulgadas"
-                                    value={nombre}
-                                    onChange={(e) => setNombre(e.target.value)}
+                                    name="nombre"
+                                    type="text"
+                                    placeholder="Nombre del producto o servicio"
+                                    value={formulario.nombre}
+                                    onChange={manejarCambioFormulario}
                                     required
                                 />
                             </div>
 
                             <div className="form-row">
                                 <div className="form-group flex-1">
-                                    <label htmlFor="precio">Precio Unitario (COP)</label>
+                                    <label htmlFor="precio">Precio Unitario ($ COP)</label>
                                     <input
-                                        type="number"
                                         id="precio"
-                                        min="1"
-                                        placeholder="Ej: 650000"
-                                        value={precio}
-                                        onChange={(e) => setPrecio(e.target.value)}
+                                        name="precio"
+                                        type="number"
+                                        min="0"
+                                        step="100"
+                                        placeholder="0"
+                                        value={formulario.precio}
+                                        onChange={manejarCambioFormulario}
                                         required
                                     />
                                 </div>
@@ -431,30 +432,46 @@ export default function Productos({
                                 <div className="form-group flex-1">
                                     <label htmlFor="stock">Stock Actual</label>
                                     <input
-                                        type="number"
                                         id="stock"
-                                        min="0"
-                                        placeholder="Ej: 20"
-                                        value={stock}
-                                        onChange={(e) => setStock(e.target.value)}
-                                        required
-                                    />
-                                </div>
-
-                                <div className="form-group flex-1">
-                                    <label htmlFor="stockMinimo">Stock Mínimo</label>
-                                    <input
+                                        name="stock"
                                         type="number"
-                                        id="stockMinimo"
                                         min="0"
-                                        placeholder="Ej: 5"
-                                        value={stockMinimo}
-                                        onChange={(e) => setStockMinimo(e.target.value)}
+                                        placeholder="0"
+                                        value={formulario.stock}
+                                        onChange={manejarCambioFormulario}
+                                        required
                                     />
                                 </div>
                             </div>
 
-                            <footer className="modal-footer">
+                            <div className="form-row">
+                                <div className="form-group flex-1">
+                                    <label htmlFor="stockMinimo">Stock Mínimo (Alerta)</label>
+                                    <input
+                                        id="stockMinimo"
+                                        name="stockMinimo"
+                                        type="number"
+                                        min="0"
+                                        value={formulario.stockMinimo}
+                                        onChange={manejarCambioFormulario}
+                                    />
+                                </div>
+
+                                <div className="form-group flex-1">
+                                    <label htmlFor="estado">Estado</label>
+                                    <select
+                                        id="estado"
+                                        name="estado"
+                                        value={formulario.estado}
+                                        onChange={manejarCambioFormulario}
+                                    >
+                                        <option value="Activo">Activo</option>
+                                        <option value="Inactivo">Inactivo</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div className="modal-footer">
                                 <button
                                     type="button"
                                     className="btn-secondary"
@@ -463,9 +480,9 @@ export default function Productos({
                                     Cancelar
                                 </button>
                                 <button type="submit" className="btn-submit">
-                                    {esModoEdicion ? "Actualizar Producto" : "Guardar Producto"}
+                                    {productoEditando ? "Guardar Cambios" : "Registrar Producto"}
                                 </button>
-                            </footer>
+                            </div>
                         </form>
                     </div>
                 </div>
