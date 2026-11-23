@@ -11,7 +11,6 @@ export default function Usuarios({ usuarioActual, onIrDashboard }) {
     const [busqueda, setBusqueda] = useState("");
     const [modalAbierto, setModalAbierto] = useState(false);
 
-    // Estado para diferenciar entre crear (null) o editar (objeto usuario)
     const [usuarioEditando, setUsuarioEditando] = useState(null);
 
     const [nombreCompleto, setNombreCompleto] = useState("");
@@ -137,6 +136,8 @@ export default function Usuarios({ usuarioActual, onIrDashboard }) {
             payload.password_hash = password;
         } else if (!esEdicion) {
             payload.password_hash = password;
+        } else if (usuarioEditando?.password_hash) {
+            payload.password_hash = usuarioEditando.password_hash;
         }
 
         const url = esEdicion ? `${API_USUARIOS_URL}/${idObjetivo}` : API_USUARIOS_URL;
