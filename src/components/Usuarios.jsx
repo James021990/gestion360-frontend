@@ -11,6 +11,9 @@ export default function Usuarios({ usuarioActual, onIrDashboard }) {
     const [busqueda, setBusqueda] = useState("");
     const [modalAbierto, setModalAbierto] = useState(false);
 
+    // Estado para diferenciar entre crear (null) o editar (objeto usuario)
+    const [usuarioEditando, setUsuarioEditando] = useState(null);
+
     const [nombreCompleto, setNombreCompleto] = useState("");
     const [documento, setDocumento] = useState("");
     const [correo, setCorreo] = useState("");
@@ -80,7 +83,10 @@ export default function Usuarios({ usuarioActual, onIrDashboard }) {
         };
     }, []);
 
-    const abrirModal = () => {
+    const obtenerIdUsuario = (user) => user?.id_usuario ?? user?.id;
+
+    const abrirModalCrear = () => {
+        setUsuarioEditando(null);
         setNombreCompleto("");
         setDocumento("");
         setCorreo("");
@@ -90,54 +96,147 @@ export default function Usuarios({ usuarioActual, onIrDashboard }) {
         setModalAbierto(true);
     };
 
-    const cerrarModal = () => {
-        setModalAbierto(false);
+    const abrirModalEditar = (user) => {
+        setUsuarioEditando(user);
+        setNombreCompleto(user.nombre_completo || "");
+        setDocumento(user.documento || "");
+        setCorreo(user.correo || "");
+        setTelefono(user.telefono || "");
+        setPassword("");
+        const idRolActual = user.rol?.id_rol ?? user.rol?.id ?? "";
+        setRolId(idRolActual ? String(idRolActual) : "");
+        setModalAbierto(true);
     };
 
-    const manejarCrearUsuario = async (e) => {
+    const cerrarModal = () => {
+        setModalAbierto(false);
+        setUsuarioEditando(null);
+    };
+
+    const manejarGuardarUsuario = async (e) => {
         e.preventDefault();
         setCargando(true);
         setEsError(false);
         setMensaje("");
 
-        const nuevoUsuario = {
+        const esEdicion = Boolean(usuarioEditando);
+        const idObjetivo = obtenerIdUsuario(usuarioEditando);
+
+        const payload = {
             nombre_completo: nombreCompleto.trim(),
-            documento: documento.trim() || "0000000000",
+            documento: documento.trim() || usuarioEditando?.documento || "0000000000",
             correo: correo.trim(),
-            telefono: telefono.trim() || "0000000000",
-            password_hash: password,
-            estado: "ACTIVO",
+            telefono: telefono.trim() || usuarioEditando?.telefono || "0000000000",
+            estado: usuarioEditando?.estado || "ACTIVO",
             rol: {
                 id_rol: Number(rolId),
             },
         };
 
+        if (password.trim() !== "") {
+            payload.password_hash = password;
+        } else if (!esEdicion) {
+            payload.password_hash = password;
+        }
+
+        const url = esEdicion ? `${API_USUARIOS_URL}/${idObjetivo}` : API_USUARIOS_URL;
+        const metodo = esEdicion ? "PUT" : "POST";
+
         try {
-            const respuesta = await fetch(API_USUARIOS_URL, {
-                method: "POST",
+            const respuesta = await fetch(url, {
+                method: metodo,
                 headers: {
                     "Content-Type": "application/json",
                 },
-                body: JSON.stringify(nuevoUsuario),
+                body: JSON.stringify(payload),
             });
 
             if (!respuesta.ok) {
                 const errorData = await respuesta.json().catch(() => ({}));
                 setCargando(false);
                 setEsError(true);
-                setMensaje(errorData.mensaje || "No se pudo registrar el usuario.");
+                setMensaje(
+                    errorData.mensaje ||
+                    (esEdicion
+                        ? "No se pudo actualizar el usuario."
+                        : "No se pudo registrar el usuario.")
+                );
                 return;
             }
 
             setCargando(false);
             setModalAbierto(false);
+            setUsuarioEditando(null);
             setEsError(false);
-            setMensaje("Usuario creado exitosamente.");
+            setMensaje(
+                esEdicion
+                    ? "Usuario actualizado exitosamente."
+                    : "Usuario creado exitosamente."
+            );
             await cargarDatos();
         } catch {
             setCargando(false);
             setEsError(true);
-            setMensaje("Error de conexión con el servidor al guardar el usuario.");
+            setMensaje("Error de conexión con el servidor al guardar los cambios.");
+        }
+    };
+
+    const manejarCambiarEstado = async (user) => {
+        const idObjetivo = obtenerIdUsuario(user);
+        if (!idObjetivo) {
+            setEsError(true);
+            setMensaje("No se encontró el identificador del usuario.");
+            return;
+        }
+
+        const estaActivo = (user.estado || "").toUpperCase() === "ACTIVO";
+        const nuevoEstado = estaActivo ? "INACTIVO" : "ACTIVO";
+        const accionTexto = estaActivo ? "desactivar" : "activar";
+
+        const confirmar = window.confirm(
+            `¿Seguro que deseas ${accionTexto} a "${user.nombre_completo}"?`
+        );
+        if (!confirmar) return;
+
+        setCargando(true);
+        setEsError(false);
+        setMensaje("");
+
+        const payloadEstado = {
+            ...user,
+            estado: nuevoEstado,
+            rol: user.rol?.id_rol ? { id_rol: Number(user.rol.id_rol) } : user.rol,
+        };
+
+        try {
+            const respuesta = await fetch(`${API_USUARIOS_URL}/${idObjetivo}`, {
+                method: "PUT",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify(payloadEstado),
+            });
+
+            if (!respuesta.ok) {
+                const errorData = await respuesta.json().catch(() => ({}));
+                setCargando(false);
+                setEsError(true);
+                setMensaje(
+                    errorData.mensaje || `No se pudo ${accionTexto} el usuario.`
+                );
+                return;
+            }
+
+            setCargando(false);
+            setEsError(false);
+            setMensaje(
+                `Usuario ${estaActivo ? "desactivado" : "activado"} exitosamente.`
+            );
+            await cargarDatos();
+        } catch {
+            setCargando(false);
+            setEsError(true);
+            setMensaje("Error de conexión con el servidor al cambiar el estado.");
         }
     };
 
@@ -149,6 +248,7 @@ export default function Usuarios({ usuarioActual, onIrDashboard }) {
     });
 
     const srcLogo = typeof logo === "string" ? logo : String(logo);
+    const esModoEdicion = Boolean(usuarioEditando);
 
     return (
         <div className="usuarios-page">
@@ -197,7 +297,7 @@ export default function Usuarios({ usuarioActual, onIrDashboard }) {
                     <button
                         type="button"
                         className="btn-primary"
-                        onClick={abrirModal}
+                        onClick={abrirModalCrear}
                     >
                         + Crear Nuevo Usuario
                     </button>
@@ -241,7 +341,7 @@ export default function Usuarios({ usuarioActual, onIrDashboard }) {
                                 const activo = (user.estado || "").toUpperCase() === "ACTIVO";
 
                                 return (
-                                    <tr key={user.id_usuario ?? index}>
+                                    <tr key={obtenerIdUsuario(user) ?? index}>
                                         <td>
                                             <strong>{user.nombre_completo}</strong>
                                         </td>
@@ -257,11 +357,21 @@ export default function Usuarios({ usuarioActual, onIrDashboard }) {
                         </span>
                                         </td>
                                         <td className="action-links">
-                                            <button type="button" className="btn-edit">
+                                            <button
+                                                type="button"
+                                                className="btn-edit"
+                                                onClick={() => abrirModalEditar(user)}
+                                                disabled={cargando}
+                                            >
                                                 Editar
                                             </button>
-                                            <button type="button" className="btn-delete">
-                                                Desactivar
+                                            <button
+                                                type="button"
+                                                className="btn-delete"
+                                                onClick={() => manejarCambiarEstado(user)}
+                                                disabled={cargando}
+                                            >
+                                                {activo ? "Desactivar" : "Activar"}
                                             </button>
                                         </td>
                                     </tr>
@@ -284,7 +394,9 @@ export default function Usuarios({ usuarioActual, onIrDashboard }) {
                 >
                     <div className="modal-card">
                         <header className="modal-header">
-                            <h2>Registrar Nuevo Usuario</h2>
+                            <h2>
+                                {esModoEdicion ? "Editar Usuario" : "Registrar Nuevo Usuario"}
+                            </h2>
                             <button
                                 type="button"
                                 className="btn-close"
@@ -295,7 +407,7 @@ export default function Usuarios({ usuarioActual, onIrDashboard }) {
                             </button>
                         </header>
 
-                        <form onSubmit={manejarCrearUsuario} className="modal-body">
+                        <form onSubmit={manejarGuardarUsuario} className="modal-body">
                             <div className="form-group">
                                 <label htmlFor="fullname">Nombre Completo</label>
                                 <input
@@ -324,15 +436,21 @@ export default function Usuarios({ usuarioActual, onIrDashboard }) {
 
                             <div className="form-row">
                                 <div className="form-group flex-1">
-                                    <label htmlFor="password">Contraseña Inicial</label>
+                                    <label htmlFor="password">
+                                        {esModoEdicion
+                                            ? "Nueva Contraseña (opcional)"
+                                            : "Contraseña Inicial"}
+                                    </label>
                                     <input
                                         type="password"
                                         id="password"
                                         name="password"
-                                        placeholder="••••••••"
+                                        placeholder={
+                                            esModoEdicion ? "Dejar vacío para mantener" : "••••••••"
+                                        }
                                         value={password}
                                         onChange={(e) => setPassword(e.target.value)}
-                                        required
+                                        required={!esModoEdicion}
                                     />
                                 </div>
 
@@ -348,11 +466,14 @@ export default function Usuarios({ usuarioActual, onIrDashboard }) {
                                         <option value="" disabled>
                                             Selecciona un rol
                                         </option>
-                                        {roles.map((r) => (
-                                            <option key={r.id_rol} value={r.id_rol}>
-                                                {r.nombre_rol}
-                                            </option>
-                                        ))}
+                                        {roles.map((r) => {
+                                            const idRol = r.id_rol ?? r.id;
+                                            return (
+                                                <option key={idRol} value={idRol}>
+                                                    {r.nombre_rol}
+                                                </option>
+                                            );
+                                        })}
                                     </select>
                                 </div>
                             </div>
@@ -367,7 +488,11 @@ export default function Usuarios({ usuarioActual, onIrDashboard }) {
                                     Cancelar
                                 </button>
                                 <button type="submit" className="btn-submit" disabled={cargando}>
-                                    {cargando ? "Guardando..." : "Guardar Usuario"}
+                                    {cargando
+                                        ? "Guardando..."
+                                        : esModoEdicion
+                                            ? "Actualizar Usuario"
+                                            : "Guardar Usuario"}
                                 </button>
                             </footer>
                         </form>
