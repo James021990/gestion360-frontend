@@ -389,3 +389,20 @@
         align-self: flex-end;
     }
 }
+
+.page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+}
+
+.page-header .btn-nuevo-usuario,
+.page-header button[id*="Crear"],
+.page-header button[class*="btn"] {
+    width: auto !important;
+    flex: 0 0 auto !important;
+    padding: 10px 18px;
+    font-size: 0.9rem;
+    white-space: nowrap;
+}
